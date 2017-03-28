@@ -12,7 +12,7 @@
 
 method main(scheduler: array<State>)
 {
-//XXX: need to initialize scheduler before this is called.
+//Need to initialize scheduler before this is called.
 
  while scheduler != empty
  {
@@ -25,24 +25,29 @@ method main(scheduler: array<State>)
 // For a queue implementation, see "Developing Verified Programs with Dafny", figure 4.
 // https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml233.pdf
 
-method exec(state: State)
+method forkable(state: State)
 {
   nIn = nextIns(state))
   //Depending on how we model memory, it might not matter if the
   //instruction is symbolic or not.
   if (!isSymb(nIn)
   {
-    return doStuff()
+    return exec()
   }
   else if (isPC(nIn))
   {
-    return doStuffSymbolic()
+    return exec_symbolic()
   }
   else{
     Right = state
     Left = state
     PC(Right) = PC(Right) && nextIns(state)
     PC(Left) = PC(Left) && !nextIns(state)
-    return (doStuff(Left), doStuff(Right))
+    return (exec(Left), exec(Right))
   }
 }
+
+//Make exec module.  These are interfaces that define behaviors
+//of exec.  This will allow us to prove things about the program.
+//Future implementation of exec must be a refinement of the interface.
+//XXX: Michael: add tutoiral explaining this.

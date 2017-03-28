@@ -63,4 +63,6 @@ method forkable(state: State) returns (states: State[])
 //Make exec module.  These are interfaces that define behaviors
 //of exec.  This will allow us to prove things about the program.
 //Future implementation of exec must be a refinement of the interface.
-//XXX: Michael: add tutoiral explaining this.
+//See this tutorial on dafny's Module capability, particularly the
+//section on Module Abstraction:
+//   http://rise4fun.com/Dafny/tutorial/Modules

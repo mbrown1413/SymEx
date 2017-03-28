@@ -1,3 +1,15 @@
+//Todo:
+//Figure out tree representation with Michael's queue stuff.
+//Figure out following classes/modules/etc.:
+//    State: how we represent variable value assignemnts here will
+//        affect how we implement PC.
+//    Scheduler: need to manage tree, add and pop functions, reason
+//        about state exploration.
+//    PC: need to figure out how to represent and call external
+//        SAT solver.
+//    exec module: come up with an interface for (sybolic) instruction
+//        execution.
+
 //We need to define State, it should have: PC, variables, variables to
 //values mapping, instructions, and a function to get the next instruction.
 

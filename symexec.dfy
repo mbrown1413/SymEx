@@ -22,6 +22,9 @@ method main(scheduler: array<State>)
  }
 }
 
+// For a queue implementation, see "Developing Verified Programs with Dafny", figure 4.
+// https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml233.pdf
+
 method exec(state: State)
 {
   nIn = nextIns(state))

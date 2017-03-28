@@ -22,7 +22,7 @@
 //beyond a proof, that means calling a solver from dafny, and ensuring the PC
 //conforms to the solver's interface.
 
-method main(scheduler: array<State>)
+method main(scheduler: State[])
 {
 //Need to initialize scheduler before this is called.
 
@@ -37,25 +37,26 @@ method main(scheduler: array<State>)
 // For a queue implementation, see "Developing Verified Programs with Dafny", figure 4.
 // https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml233.pdf
 
-method forkable(state: State)
+method forkable(state: State) returns (states: State[])
 {
+  
   nIn = nextIns(state))
   //Depending on how we model memory, it might not matter if the
   //instruction is symbolic or not.
   if (!isSymb(nIn)
   {
-    return exec()
+    states = [exec()]
   }
   else if (isPC(nIn))
   {
-    return exec_symbolic()
+    states = [exec_symbolic()]
   }
   else{
     Right = state
     Left = state
     PC(Right) = PC(Right) && nextIns(state)
     PC(Left) = PC(Left) && !nextIns(state)
-    return (exec(Left), exec(Right))
+    states = [exec(Left), exec(Right)]
   }
 }
 

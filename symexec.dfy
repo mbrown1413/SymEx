@@ -74,24 +74,23 @@ method main(scheduler: State[])
 
 method forkable(state: State) returns (states: State[])
 {
+
+  if (isBranch(state)) {
   
-  nIn = nextIns(state))
-  //Depending on how we model memory, it might not matter if the
-  //instruction is symbolic or not.
-  if (!isSymb(nIn)
-  {
-    states = [exec()]
-  }
-  else if (isPC(nIn))
-  {
-    states = [exec_symbolic()]
-  }
-  else{
-    Right = state
-    Left = state
-    PC(Right) = PC(Right) && nextIns(state)
-    PC(Left) = PC(Left) && !nextIns(state)
-    states = [exec(Left), exec(Right)]
+    bc = branchCondition(state)
+    s1, s2 = execBranch(state)
+    s1.pc = state.pc ^ bc;
+    s2.pc = state.pc ^ !bc;
+    if !sat(s1.bc) {
+      return [s2];
+    } else if !sat(s2.bc) {
+      return [s1];
+    } else {
+      return [s1, s2];
+    }
+    
+  } else {  // Not Branch
+    return [exec(state)];
   }
 }
 

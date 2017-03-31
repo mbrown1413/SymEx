@@ -22,13 +22,48 @@
 //beyond a proof, that means calling a solver from dafny, and ensuring the PC
 //conforms to the solver's interface.
 
+class {:autocontracts} Queue<Node>
+{
+ ghost var Contents: seq<Node>;
+ var a: array<Node>;
+ var start: int, end: int;
+ predicate Valid() {
+  a != null ∧ a.Length != 0 ∧ 0 <= start <= end <= a.Length ∧ Contents = a[start..end]
+ }
+ constructor ()
+  ensures Contents = [];
+ {
+  a, start, end, Contents := new Node[10], 0, 0, [];
+ }
+ method Enqueue(d: Node)
+  ensures Contents = old(Contents) + [d];
+ {
+  if end = a.Length {
+   var b := a;
+   if start = 0 { b := new Node[2 * a.Length]; }
+   forall (i | 0 <= i < end - start) {
+    b[i] := a[start + i];
+   }
+   a, start, end := b, 0, end - start;
+  }
+  a[end], end, Contents := d, end + 1, Contents + [d];
+ }
+ method Dequeue() returns (d: Node)
+  requires Contents != [];
+  ensures d = old(Contents)[0] ∧ Contents = old(Contents)[1..];
+ {
+  assert a[start] = a[start..end][0];
+  d, start, Contents := a[start], start + 1, Contents[1..];
+ }
+}
+
 method main(scheduler: State[])
 {
 //Need to initialize scheduler before this is called.
 
  while scheduler != empty
  {
-   state = pop(scheduler)
+   state = scheduler
    next_states = exec(state)
    add(scheduler, next_states)
  }

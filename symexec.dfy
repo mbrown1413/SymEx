@@ -28,19 +28,19 @@ class {:autocontracts} Queue<Node>
  var a: array<Node>;
  var start: int, end: int;
  predicate Valid() {
-  a != null ∧ a.Length != 0 ∧ 0 <= start <= end <= a.Length ∧ Contents = a[start..end]
+  (a != null) ^ (a.Length != 0) ^ (0 <= start <= end <= a.Length) ^ (Contents == a[start..end])
  }
  constructor ()
-  ensures Contents = [];
+  ensures Contents == [];
  {
   a, start, end, Contents := new Node[10], 0, 0, [];
  }
  method Enqueue(d: Node)
-  ensures Contents = old(Contents) + [d];
+  ensures Contents == old(Contents) + [d];
  {
-  if end = a.Length {
+  if end == a.Length {
    var b := a;
-   if start = 0 { b := new Node[2 * a.Length]; }
+   if start == 0 { b := new Node[2 * a.Length]; }
    forall (i | 0 <= i < end - start) {
     b[i] := a[start + i];
    }
@@ -50,37 +50,37 @@ class {:autocontracts} Queue<Node>
  }
  method Dequeue() returns (d: Node)
   requires Contents != [];
-  ensures d = old(Contents)[0] ∧ Contents = old(Contents)[1..];
+  ensures d == old(Contents)[0] ^ Contents == old(Contents)[1..];
  {
-  assert a[start] = a[start..end][0];
+  assert a[start] == a[start..end][0];
   d, start, Contents := a[start], start + 1, Contents[1..];
  }
 }
 
-method main(scheduler: State[])
+method main(scheduler: seq<State>)
 {
 //Need to initialize scheduler before this is called.
 
  while scheduler != empty
  {
-   state = scheduler
-   next_states = exec(state)
-   add(scheduler, next_states)
+   state := scheduler;
+   next_states := exec(state);
+   add(scheduler, next_states);
  }
 }
 
 // For a queue implementation, see "Developing Verified Programs with Dafny", figure 4.
 // https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml233.pdf
 
-method forkable(state: State) returns (states: State[])
+method forkable(state: State) returns (states: seq<State>)
 {
 
   if (isBranch(state)) {
   
-    bc = branchCondition(state)
-    s1, s2 = execBranch(state)
-    s1.pc = state.pc ^ bc;
-    s2.pc = state.pc ^ !bc;
+    bc := branchCondition(state);
+    s1, s2 := execBranch(state);
+    s1.pc := state.pc ^ bc;
+    s2.pc := state.pc ^ !bc;
     if !sat(s1.bc) {
       return [s2];
     } else if !sat(s2.bc) {
@@ -99,4 +99,4 @@ method forkable(state: State) returns (states: State[])
 //Future implementation of exec must be a refinement of the interface.
 //See this tutorial on dafny's Module capability, particularly the
 //section on Module Abstraction:
-//   http://rise4fun.com/Dafny/tutorial/Modules
+// http://rise4fun.com/Dafny/tutorial/Modules

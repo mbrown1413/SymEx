@@ -22,13 +22,25 @@
 //beyond a proof, that means calling a solver from dafny, and ensuring the PC
 //conforms to the solver's interface.
 
+module AbstractExecutor {
+    type State<T>
+    function isBranch(s: State): bool
+    function branchCondition(s: State): bool
+    function execBranch(s: State): (State, State)
+    function exec(s: State): State
+}
+import Exec : AbstractExecutor
+
+
+// Queue implementation based on "Developing Verified Programs with Dafny", figure 4.
+// https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml233.pdf
 class {:autocontracts} Queue<Node>
 {
  ghost var Contents: seq<Node>;
  var a: array<Node>;
  var start: int, end: int;
  predicate Valid() {
-  (a != null) ^ (a.Length != 0) ^ (0 <= start <= end <= a.Length) ^ (Contents == a[start..end])
+  (a != null) && (a.Length != 0) && (0 <= start <= end <= a.Length) && (Contents == a[start..end])
  }
  constructor ()
   ensures Contents == [];
@@ -50,37 +62,46 @@ class {:autocontracts} Queue<Node>
  }
  method Dequeue() returns (d: Node)
   requires Contents != [];
-  ensures d == old(Contents)[0] ^ Contents == old(Contents)[1..];
+  ensures d == old(Contents)[0] && Contents == old(Contents)[1..];
  {
   assert a[start] == a[start..end][0];
   d, start, Contents := a[start], start + 1, Contents[1..];
  }
-}
-
-method main(scheduler: seq<State>)
-{
-//Need to initialize scheduler before this is called.
-
- while scheduler != empty
+ function is_empty(): bool
  {
-   state := scheduler;
-   next_states := exec(state);
-   add(scheduler, next_states);
+    Contents == []
  }
 }
 
-// For a queue implementation, see "Developing Verified Programs with Dafny", figure 4.
-// https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml233.pdf
+method main()
+{
+//Need to initialize scheduler before this is called.
 
-method forkable(state: State) returns (states: seq<State>)
+ var scheduler := new Queue<Exec.State>();
+
+ while !scheduler.is_empty()
+ {
+   var state := scheduler.Dequeue();
+   var next_states := forkable(state);
+
+   var i := 0;
+   while i < |next_states|
+   {
+     scheduler.Enqueue(next_states[i]);
+     i := i+1;
+   }
+ }
+}
+
+method forkable(state: Exec.State) returns (states: seq<Exec.State>)
 {
 
-  if (isBranch(state)) {
+  if (Exec.isBranch(state)) {
   
-    bc := branchCondition(state);
-    s1, s2 := execBranch(state);
-    s1.pc := state.pc ^ bc;
-    s2.pc := state.pc ^ !bc;
+    bc := Exec.branchCondition(state);
+    var (s1, s2) := Exec.execBranch(state);
+    s1.pc := state.pc && bc;
+    s2.pc := state.pc && !bc;
     if !sat(s1.bc) {
       return [s2];
     } else if !sat(s2.bc) {
@@ -90,7 +111,7 @@ method forkable(state: State) returns (states: seq<State>)
     }
     
   } else {  // Not Branch
-    return [exec(state)];
+    return [Exec.exec(state)];
   }
 }
 

@@ -23,11 +23,11 @@
 //conforms to the solver's interface.
 
 module AbstractExecutor {
-    type State<T>
-    function isBranch(s: State): bool
-    function branchCondition(s: State): bool
-    function execBranch(s: State): (State, State)
-    function exec(s: State): State
+  type State<T>
+  function isBranch(s: State): bool
+  function branchCondition(s: State): bool
+  function execBranch(s: State): (State, State)
+  function exec(s: State): State
 }
 import Exec : AbstractExecutor
 
@@ -36,61 +36,59 @@ import Exec : AbstractExecutor
 // https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml233.pdf
 class {:autocontracts} Queue<Node>
 {
- ghost var Contents: seq<Node>;
- var a: array<Node>;
- var start: int, end: int;
- predicate Valid() {
-  (a != null) && (a.Length != 0) && (0 <= start <= end <= a.Length) && (Contents == a[start..end])
- }
- constructor ()
-  ensures Contents == [];
- {
-  a, start, end, Contents := new Node[10], 0, 0, [];
- }
- method Enqueue(d: Node)
-  ensures Contents == old(Contents) + [d];
- {
-  if end == a.Length {
-   var b := a;
-   if start == 0 { b := new Node[2 * a.Length]; }
-   forall (i | 0 <= i < end - start) {
-    b[i] := a[start + i];
-   }
-   a, start, end := b, 0, end - start;
+  ghost var Contents: seq<Node>;
+  var a: array<Node>;
+  var start: int, end: int;
+  predicate Valid() {
+    (a != null) && (a.Length != 0) && (0 <= start <= end <= a.Length) && (Contents == a[start..end])
   }
-  a[end], end, Contents := d, end + 1, Contents + [d];
- }
- method Dequeue() returns (d: Node)
-  requires Contents != [];
-  ensures d == old(Contents)[0] && Contents == old(Contents)[1..];
- {
-  assert a[start] == a[start..end][0];
-  d, start, Contents := a[start], start + 1, Contents[1..];
- }
- function is_empty(): bool
- {
+  constructor ()
+    ensures Contents == [];
+  {
+    a, start, end, Contents := new Node[10], 0, 0, [];
+  }
+  method Enqueue(d: Node)
+    ensures Contents == old(Contents) + [d];
+  {
+    if end == a.Length {
+      var b := a;
+      if start == 0 { b := new Node[2 * a.Length]; }
+      forall (i | 0 <= i < end - start) {
+        b[i] := a[start + i];
+      }
+      a, start, end := b, 0, end - start;
+    }
+    a[end], end, Contents := d, end + 1, Contents + [d];
+  }
+  method Dequeue() returns (d: Node)
+    requires Contents != [];
+    ensures d == old(Contents)[0] && Contents == old(Contents)[1..];
+  {
+    assert a[start] == a[start..end][0];
+    d, start, Contents := a[start], start + 1, Contents[1..];
+  }
+  function is_empty(): bool
+  {
     Contents == []
- }
+  }
 }
 
 method main()
 {
-//Need to initialize scheduler before this is called.
+  var scheduler := new Queue<Exec.State>();
 
- var scheduler := new Queue<Exec.State>();
+  while !scheduler.is_empty()
+  {
+    var state := scheduler.Dequeue();
+    var next_states := forkable(state);
 
- while !scheduler.is_empty()
- {
-   var state := scheduler.Dequeue();
-   var next_states := forkable(state);
-
-   var i := 0;
-   while i < |next_states|
-   {
-     scheduler.Enqueue(next_states[i]);
-     i := i+1;
-   }
- }
+    var i := 0;
+    while i < |next_states|
+    {
+      scheduler.Enqueue(next_states[i]);
+      i := i+1;
+    }
+  }
 }
 
 method forkable(state: Exec.State) returns (states: seq<Exec.State>)
@@ -114,10 +112,3 @@ method forkable(state: Exec.State) returns (states: seq<Exec.State>)
     return [Exec.exec(state)];
   }
 }
-
-//Make exec module.  These are interfaces that define behaviors
-//of exec.  This will allow us to prove things about the program.
-//Future implementation of exec must be a refinement of the interface.
-//See this tutorial on dafny's Module capability, particularly the
-//section on Module Abstraction:
-// http://rise4fun.com/Dafny/tutorial/Modules

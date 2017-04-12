@@ -121,7 +121,7 @@ method main()
   }
 }
 
-method forkable(state: Exec.State) returns (states: seq<Exec.State>)
+method forkable(state: Exec.State) 
 {
 
   if (Exec.isBranch(state)) {
@@ -138,7 +138,7 @@ method forkable(state: Exec.State) returns (states: seq<Exec.State>)
       scheduler.DoubleEnqueue(s1, s2);
     }
     
-  } else {  // Not Branch
-    return [Exec.exec(state)];
+  } else {  // Not Branch //Left enqueue in this case
+    scheduler.LeftEnqueue(Exec.exec(state));
   }
 }

@@ -47,8 +47,25 @@ class {:autocontracts} Queue<Node>
   {
     a, start, end, Contents := new Node[10], 0, 0, [];
   }
-  method Enqueue(d: Node)
-    ensures Contents == old(Contents) + [d];
+  
+  
+  method DoubleEnqueue(lc: Node, rc: Node)
+    ensures Contents == old(Contents) + [lc] + [rc];
+  {
+    if end == a.Length {
+      var b := a;
+      if start == 0 { b := new Node[2 * a.Length]; }
+      forall (i | 0 <= i < end - start) {
+        b[i] := a[start + i];
+      }
+      a, start, end := b, 0, end - start;
+    }
+    a[end], end, Contents := d, end + 1, Contents + [lc];
+    a[end], end, Contents := d, end + 1, Contents + [rc];
+  }
+  
+  method LeftEnqueue(d: Node)
+    ensures Contents == old(Contents) + [d] + null;
   {
     if end == a.Length {
       var b := a;
@@ -59,7 +76,24 @@ class {:autocontracts} Queue<Node>
       a, start, end := b, 0, end - start;
     }
     a[end], end, Contents := d, end + 1, Contents + [d];
+    a[end], end, Contents := d, end + 1, Contents + null;
   }
+  
+  method RightEnqueue(d: Node)
+    ensures Contents == old(Contents) + null + [d];
+  {
+    if end == a.Length {
+      var b := a;
+      if start == 0 { b := new Node[2 * a.Length]; }
+      forall (i | 0 <= i < end - start) {
+        b[i] := a[start + i];
+      }
+      a, start, end := b, 0, end - start;
+    }
+    a[end], end, Contents := d, end + 1, Contents + null;
+    a[end], end, Contents := d, end + 1, Contents + [d];
+  }
+  
   method Dequeue() returns (d: Node)
     requires Contents != [];
     ensures d == old(Contents)[0] && Contents == old(Contents)[1..];
@@ -80,14 +114,10 @@ method main()
   while !scheduler.is_empty()
   {
     var state := scheduler.Dequeue();
-    var next_states := forkable(state);
-
-    var i := 0;
-    while i < |next_states|
-    {
-      scheduler.Enqueue(next_states[i]);
-      i := i+1;
+    if state != null{
+      var next_states := forkable(state);
     }
+    
   }
 }
 
@@ -101,11 +131,11 @@ method forkable(state: Exec.State) returns (states: seq<Exec.State>)
     s1.pc := state.pc && bc;
     s2.pc := state.pc && !bc;
     if !sat(s1.bc) {
-      return [s2];
+      scheduler.RightEngueue(s2);
     } else if !sat(s2.bc) {
-      return [s1];
+      scheduler.LeftEnqueue(s1);
     } else {
-      return [s1, s2];
+      scheduler.DoubleEnqueue(s1, s2);
     }
     
   } else {  // Not Branch

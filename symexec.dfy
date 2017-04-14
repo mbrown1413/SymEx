@@ -32,6 +32,27 @@ module AbstractExecutor {
 import Exec : AbstractExecutor
 
 
+class {:autocontracts} Node
+{
+  var state: exec.State;
+  var pc: seq<char>;
+  predicate Valid() {
+    (seq != null) && (pc != null)
+  }
+  constructor (input_state: exec.State, input_pc: seq<char> )
+  {
+    State, pc := input_state, input_pc;
+  }
+  method getPC() returns (retPC: seq<char>)
+  {
+    retPC := pc;
+  }
+  method getState() returns (retState: exec.State)
+  {
+    retState := state;
+  }
+}
+
 // Queue implementation based on "Developing Verified Programs with Dafny", figure 4.
 // https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml233.pdf
 class {:autocontracts} Queue<Node>

@@ -134,32 +134,32 @@ method main()
 
   while !scheduler.is_empty()
   {
-    var state := scheduler.Dequeue();
-    if state != null{
-      var next_states := forkable(state);
+    var state_node := scheduler.Dequeue();
+    if state_node != null{
+      var next_state_nodes := forkable(state_node);
     }
     
   }
 }
 
-method forkable(state: Exec.State) 
+method forkable(state_node: Exec.State) 
 {
 
-  if (Exec.isBranch(state)) {
+  if (Exec.isBranch(state_node.getState())) {
   
-    bc := Exec.branchCondition(state);
-    var (s1, s2) := Exec.execBranch(state);
-    s1.pc := state.pc && bc;
-    s2.pc := state.pc && !bc;
-    if !sat(s1.bc) {
-      scheduler.RightEngueue(s2);
-    } else if !sat(s2.bc) {
-      scheduler.LeftEnqueue(s1);
+    bc := Exec.branchCondition(state_node.getState());
+    var (s1_state, s2_state) := Exec.execBranch(state_node.getState());
+    s1_pc := state_node.getPC() && bc;
+    s2_pc := state_node.getPC() && !bc;
+    if !sat(s1_pc) {
+      scheduler.RightEngueue(new Node(s2_state, s2_pc));
+    } else if !sat(s2_pc) {
+      scheduler.LeftEnqueue(new Node(s1_state, s1_pc));
     } else {
-      scheduler.DoubleEnqueue(s1, s2);
+      scheduler.DoubleEnqueue(new Node(s1_state, s1_pc), new Node(s2_state, s2_pc));
     }
     
   } else {  // Not Branch //Left enqueue in this case
-    scheduler.LeftEnqueue(Exec.exec(state));
+    scheduler.LeftEnqueue(Exec.exec(state_node.getState()));
   }
 }

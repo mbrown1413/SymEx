@@ -69,9 +69,9 @@ class {:autocontracts} Queue<Node>
     a, start, end, Contents := new Node[10], 0, 0, [];
   }
   
-  method getTree() returns (a: array<node>)
+  method getTree() returns (T: array<node>)
   {
-    return a;
+    T := a;
   }
   method DoubleEnqueue(lc: Node, rc: Node)
     ensures Contents == old(Contents) + [lc] + [rc];
@@ -143,7 +143,7 @@ method main() returns (tree: array<Node>)
     }
     
   }
-  tree = scheduler.getTree();
+  tree := scheduler.getTree();
   return tree;
 }
 

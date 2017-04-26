@@ -31,6 +31,14 @@ module AbstractExecutor {
 }
 import Exec : AbstractExecutor
 
+method isLeaf(nodeIndex: int, tree:array<Node>) returns (bool: boolean)
+{
+  if (tree[2*nodeIndex+1]==null)&&(tree[2*nodeIndex+2]==null)
+  {
+   bool := true;
+  }
+  bool := false;
+}
 
 class {:autocontracts} Node
 {
@@ -55,76 +63,63 @@ class {:autocontracts} Node
 
 // Queue implementation based on "Developing Verified Programs with Dafny", figure 4.
 // https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml233.pdf
-class {:autocontracts} Queue<Node>
+class {:autocontracts} TreeQueue<Node>
 {
-  ghost var Contents: seq<Node>;
   var a: array<Node>;
   var start: int, end: int;
   predicate Valid() {
     (a != null) && (a.Length != 0) && (0 <= start <= end <= a.Length) && (Contents == a[start..end])
   }
   constructor ()
-    ensures Contents == [];
   {
-    a, start, end, Contents := new Node[10], 0, 0, [];
+    a, start, end := new Node[10], 0, 0;
   }
   
   method getTree() returns (T: array<node>)
   {
+    T := new Node[a.Length];
     T := a;
   }
+
   method DoubleEnqueue(lc: Node, rc: Node)
-    ensures Contents == old(Contents) + [lc] + [rc];
+    ensures a[2*(start-1)+1] == lc;
+    ensures a[2*(start-1)+2] == rc;
   {
-    if end == a.Length {
-      var b := a;
-      if start == 0 { b := new Node[2 * a.Length]; }
-      forall (i | 0 <= i < end - start) {
-        b[i] := a[start + i];
-      }
-      a, start, end := b, 0, end - start;
-    }
-    a[end], end, Contents := d, end + 1, Contents + [lc];
-    a[end], end, Contents := d, end + 1, Contents + [rc];
+    b := new Node[3 * a.Length];
+    b := a;
+    b[2*(start-1)+1]:= lc;
+    b[2*(start-1)+2]:= rc;
+    a, end := b, 2*(start-1)+2;
   }
   
   method LeftEnqueue(d: Node)
-    ensures Contents == old(Contents) + [d] + null;
+    ensures a[2*(start-1)+1] == d;
+    ensures a[2*(start-1)+2] == null;
   {
-    if end == a.Length {
-      var b := a;
-      if start == 0 { b := new Node[2 * a.Length]; }
-      forall (i | 0 <= i < end - start) {
-        b[i] := a[start + i];
-      }
-      a, start, end := b, 0, end - start;
-    }
-    a[end], end, Contents := d, end + 1, Contents + [d];
-    a[end], end, Contents := d, end + 1, Contents + null;
+    b := new Node[3 * a.Length];
+    b := a;
+    b[2*(start-1)+1]:= d;
+    b[2*(start-1)+2]:= null;
+    a, end := b, 2*(start-1)+2;
   }
   
   method RightEnqueue(d: Node)
-    ensures Contents == old(Contents) + null + [d];
+    ensures a[2*(start-1)+1] == null;
+    ensures a[2*(start-1)+2] == d;
   {
-    if end == a.Length {
-      var b := a;
-      if start == 0 { b := new Node[2 * a.Length]; }
-      forall (i | 0 <= i < end - start) {
-        b[i] := a[start + i];
-      }
-      a, start, end := b, 0, end - start;
-    }
-    a[end], end, Contents := d, end + 1, Contents + null;
-    a[end], end, Contents := d, end + 1, Contents + [d];
+    b := new Node[3 * a.Length];
+    b := a;
+    b[2*(start-1)+1]:= null;
+    b[2*(start-1)+2]:= d;
+    a, end := b, 2*(start-1)+2;
   }
   
   method Dequeue() returns (d: Node)
-    requires Contents != [];
-    ensures d == old(Contents)[0] && Contents == old(Contents)[1..];
+    ensures a[start] == a[old(start)+1];
   {
-    assert a[start] == a[start..end][0];
-    d, start, Contents := a[start], start + 1, Contents[1..];
+    d, start := a[start], start+1
   }
+  
   function is_empty(): bool
   {
     Contents == []
@@ -132,8 +127,13 @@ class {:autocontracts} Queue<Node>
 }
 
 method main() returns (tree: array<Node>)
+  //King Prop 1
+  ensures forall i :: 0<=i<=tree.Length => SAT(tree[i].getPC())
+  //King Prop 2
+  ensures forall j,k :: 0<=j<=tree.Length && 0<=k<=tree.Length => tree[j].isLeaf() && tree[k].isLeaf() && j!=k => !(SAT(tree[j].getPC()&&tree[k].getPC()))
+  
 {
-  var scheduler := new Queue<Exec.State>();
+  var scheduler := new TreeQueue<Exec.State>();
 
   while !scheduler.is_empty()
   {

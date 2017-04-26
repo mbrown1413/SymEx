@@ -69,7 +69,10 @@ class {:autocontracts} Queue<Node>
     a, start, end, Contents := new Node[10], 0, 0, [];
   }
   
-  
+  method getTree() returns (a: array<node>)
+  {
+    return a;
+  }
   method DoubleEnqueue(lc: Node, rc: Node)
     ensures Contents == old(Contents) + [lc] + [rc];
   {
@@ -128,7 +131,7 @@ class {:autocontracts} Queue<Node>
   }
 }
 
-method main()
+method main() returns (tree: array<Node>)
 {
   var scheduler := new Queue<Exec.State>();
 
@@ -140,6 +143,8 @@ method main()
     }
     
   }
+  tree = scheduler.getTree();
+  return tree;
 }
 
 method forkable(state_node: Exec.State) 

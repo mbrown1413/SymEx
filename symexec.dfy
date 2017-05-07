@@ -23,7 +23,7 @@
 //conforms to the solver's interface.
 
 module AbstractExecutor {
-  type State<T>
+  type State
   function isBranch(s: State): bool
   function branchCondition(s: State): bool
   function execBranch(s: State): (State, State)
@@ -31,31 +31,31 @@ module AbstractExecutor {
 }
 import Exec : AbstractExecutor
 
-method isLeaf(nodeIndex: int, tree:array<Node>) returns (bool: boolean)
+method isLeaf(nodeIndex: int, tree:array<Node>) returns (boolean: bool)
 {
   if (tree[2*nodeIndex+1]==null)&&(tree[2*nodeIndex+2]==null)
   {
-   bool := true;
+   boolean := true;
   }
-  bool := false;
+  boolean := false;
 }
 
 class {:autocontracts} Node
 {
-  var state: exec.State;
+  var state: Exec.State;
   var pc: seq<char>;
   predicate Valid() {
-    (seq != null) && (pc != null)
+    (state != null) && (pc != null)
   }
-  constructor (input_state: exec.State, input_pc: seq<char> )
+  constructor (input_state: Exec.State, input_pc: seq<char> )
   {
-    State, pc := input_state, input_pc;
+    state, pc := input_state, input_pc;
   }
   method getPC() returns (retPC: seq<char>)
   {
     retPC := pc;
   }
-  method getState() returns (retState: exec.State)
+  method getState() returns (retState: Exec.State)
   {
     retState := state;
   }
@@ -75,7 +75,7 @@ class {:autocontracts} TreeQueue<Node>
     a, start, end := new Node[10], 0, 0;
   }
   
-  method getTree() returns (T: array<node>)
+  method getTree() returns (T: array<Node>)
   {
     T := new Node[a.Length];
     T := a;
@@ -117,7 +117,7 @@ class {:autocontracts} TreeQueue<Node>
   method Dequeue() returns (d: Node)
     ensures a[start] == a[old(start)+1];
   {
-    d, start := a[start], start+1
+    d, start := a[start], start+1;
   }
   
   function is_empty(): bool
@@ -128,9 +128,9 @@ class {:autocontracts} TreeQueue<Node>
 
 method main() returns (tree: array<Node>)
   //King Prop 1
-  ensures forall i :: 0<=i<=tree.Length => SAT(tree[i].getPC())
+  ensures forall i :: 0<=i<=tree.Length ==> SAT(tree[i].getPC());
   //King Prop 2
-  ensures forall j,k :: 0<=j<=tree.Length && 0<=k<=tree.Length => tree[j].isLeaf() && tree[k].isLeaf() && j!=k => !(SAT(tree[j].getPC()&&tree[k].getPC()))
+  ensures forall j,k :: 0<=j<=tree.Length && 0<=k<=tree.Length ==> tree[j].isLeaf() && tree[k].isLeaf() && j!=k ==> !(SAT(tree[j].getPC()&&tree[k].getPC()));
   
 {
   var scheduler := new TreeQueue<Exec.State>();
@@ -139,7 +139,7 @@ method main() returns (tree: array<Node>)
   {
     var state_node := scheduler.Dequeue();
     if state_node != null{
-      var next_state_nodes := forkable(state_node);
+      forkable(scheduler, state_node);
     }
     
   }
@@ -147,21 +147,22 @@ method main() returns (tree: array<Node>)
   return tree;
 }
 
-method forkable(state_node: Exec.State) 
+method forkable(scheduler: TreeQueue<Exec.State>, state_node: Exec.State)
 {
-
   if (Exec.isBranch(state_node.getState())) {
   
     bc := Exec.branchCondition(state_node.getState());
     var (s1_state, s2_state) := Exec.execBranch(state_node.getState());
     s1_pc := state_node.getPC() && bc;
     s2_pc := state_node.getPC() && !bc;
+    node1 := new Node(s1_state, s1_pc);
+    node2 := new Node(s2_state, s2_pc);
     if !sat(s1_pc) {
-      scheduler.RightEngueue(new Node(s2_state, s2_pc));
+      scheduler.RightEnqueue(node2);
     } else if !sat(s2_pc) {
-      scheduler.LeftEnqueue(new Node(s1_state, s1_pc));
+      scheduler.LeftEnqueue(node1);
     } else {
-      scheduler.DoubleEnqueue(new Node(s1_state, s1_pc), new Node(s2_state, s2_pc));
+      scheduler.DoubleEnqueue(node1, node2);
     }
     
   } else {  // Not Branch //Left enqueue in this case

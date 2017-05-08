@@ -22,118 +22,132 @@
 //beyond a proof, that means calling a solver from dafny, and ensuring the PC
 //conforms to the solver's interface.
 
+module AbstractSatLib {
+    type Equation
+    function sat(f1: Equation): bool
+    function and(f1: Equation, f2: Equation): Equation
+    function not(f1: Equation): Equation
+}
+
 module AbstractExecutor {
+  import opened SatLib : AbstractSatLib
+
   type State
   function isBranch(s: State): bool
-  function branchCondition(s: State): bool
+  function branchCondition(s: State): SatLib.Equation
   function execBranch(s: State): (State, State)
   function exec(s: State): State
 }
-import Exec : AbstractExecutor
+import opened Exec : AbstractExecutor
 
-method isLeaf(nodeIndex: int, tree:array<Node>) returns (boolean: bool)
+function isLeaf(nodeIndex: int, tree:array<Node>): bool
 {
-  if (tree[2*nodeIndex+1]==null)&&(tree[2*nodeIndex+2]==null)
-  {
-   boolean := true;
-  }
-  boolean := false;
+  (tree[2*nodeIndex+1] == null) && (tree[2*nodeIndex+2] == null)
 }
 
 class {:autocontracts} Node
 {
-  var state: Exec.State;
-  var pc: seq<char>;
-  predicate Valid() {
-    (state != null) && (pc != null)
-  }
-  constructor (input_state: Exec.State, input_pc: seq<char> )
+  var state: State;
+  var pc: SatLib.Equation;
+  constructor (input_state: State, input_pc: SatLib.Equation )
   {
     state, pc := input_state, input_pc;
   }
-  method getPC() returns (retPC: seq<char>)
+  method getPC() returns (retPC: SatLib.Equation)
   {
     retPC := pc;
   }
-  method getState() returns (retState: Exec.State)
-  {
-    retState := state;
-  }
 }
+datatype NodeMaybe = Some(v:Node) | None
 
 // Queue implementation based on "Developing Verified Programs with Dafny", figure 4.
 // https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml233.pdf
-class {:autocontracts} TreeQueue<Node>
+class {:autocontracts} TreeQueue
 {
-  var a: array<Node>;
+  var a: array<NodeMaybe>;
   var start: int, end: int;
   predicate Valid() {
-    (a != null) && (a.Length != 0) && (0 <= start <= end <= a.Length) && (Contents == a[start..end])
+    (a != null) && (a.Length != 0) && (0 <= start <= end <= a.Length)
   }
   constructor ()
   {
-    a, start, end := new Node[10], 0, 0;
+    a, start, end := new NodeMaybe[10], 0, 0;
   }
   
-  method getTree() returns (T: array<Node>)
+  method getTree() returns (T: array<NodeMaybe>)
   {
-    T := new Node[a.Length];
+    T := new NodeMaybe[a.Length];
     T := a;
   }
 
   method DoubleEnqueue(lc: Node, rc: Node)
-    ensures a[2*(start-1)+1] == lc;
-    ensures a[2*(start-1)+2] == rc;
+    ensures match a[2*(start-1)+1] case Some(n) => n == lc;
+    ensures match a[2*(start-1)+2] case Some(node) => node == rc;
   {
-    b := new Node[3 * a.Length];
+    var b := new NodeMaybe[3 * a.Length];
     b := a;
-    b[2*(start-1)+1]:= lc;
-    b[2*(start-1)+2]:= rc;
+    b[2*(start-1)+1]:= Some(lc);
+    b[2*(start-1)+2]:= Some(rc);
     a, end := b, 2*(start-1)+2;
   }
   
   method LeftEnqueue(d: Node)
-    ensures a[2*(start-1)+1] == d;
-    ensures a[2*(start-1)+2] == null;
+    ensures a[2*(start-1)+1] == Some(d);
+    ensures a[2*(start-1)+2] == None;
   {
-    b := new Node[3 * a.Length];
+    var b := new NodeMaybe[3 * a.Length];
     b := a;
-    b[2*(start-1)+1]:= d;
-    b[2*(start-1)+2]:= null;
+    b[2*(start-1)+1]:= Some(d);
+    b[2*(start-1)+2]:= None;
     a, end := b, 2*(start-1)+2;
   }
   
   method RightEnqueue(d: Node)
-    ensures a[2*(start-1)+1] == null;
-    ensures a[2*(start-1)+2] == d;
+    ensures a[2*(start-1)+1] == None;
+    ensures a[2*(start-1)+2] == Some(d);
   {
-    b := new Node[3 * a.Length];
+    var b := new NodeMaybe[3 * a.Length];
     b := a;
-    b[2*(start-1)+1]:= null;
-    b[2*(start-1)+2]:= d;
+    b[2*(start-1)+1]:= None;
+    b[2*(start-1)+2]:= Some(d);
     a, end := b, 2*(start-1)+2;
   }
   
   method Dequeue() returns (d: Node)
     ensures a[start] == a[old(start)+1];
   {
-    d, start := a[start], start+1;
+    start := start+1;
+    d := match a[start] case Some(node) => node;
   }
   
   function is_empty(): bool
-  {
-    Contents == []
-  }
+  //{ }  //TODO
 }
 
-method main() returns (tree: array<Node>)
+method main() returns (tree: array<NodeMaybe>)
   //King Prop 1
-  ensures forall i :: 0<=i<=tree.Length ==> SAT(tree[i].getPC());
+  ensures forall i ::
+    var node_i := match tree[i] case Some(node) => node;
+    0<=i<=tree.Length ==> SatLib.sat(node_i.pc);
   //King Prop 2
-  ensures forall j,k :: 0<=j<=tree.Length && 0<=k<=tree.Length ==> tree[j].isLeaf() && tree[k].isLeaf() && j!=k ==> !(SAT(tree[j].getPC()&&tree[k].getPC()));
-  
+  /*
+  ensures forall j,k ::
+    var node_j := match tree[j] case Some(node) => node;
+    var node_k := match tree[k] case Some(node) => node;
+    0<=j<=tree.Length && 0<=k<=tree.Length ==> isLeaf(node_j, tree) && isLeaf(node_k, tree) && j!=k ==> !(SatLib.sat(SatLib.and(node_j.pc, node_k.pc)))
+  */
+  /*
+    match tree[j]
+      case None => false
+      case Some(node_j) =>
+        (match tree[k]
+          case None => false
+          case Some(node_k) =>
+            0<=j<=tree.Length && 0<=k<=tree.Length ==> isLeaf(node_j, tree) && isLeaf(node_k, tree) && j!=k ==> !(SatLib.sat(SatLib.and(node_j.pc, node_k.pc)))
+        );
+  */
 {
-  var scheduler := new TreeQueue<Exec.State>();
+  var scheduler := new TreeQueue();
 
   while !scheduler.is_empty()
   {
@@ -147,25 +161,27 @@ method main() returns (tree: array<Node>)
   return tree;
 }
 
-method forkable(scheduler: TreeQueue<Exec.State>, state_node: Exec.State)
+method forkable(scheduler: TreeQueue, state_node: Node)
 {
-  if (Exec.isBranch(state_node.getState())) {
+  if (Exec.isBranch(state_node.state)) {
   
-    bc := Exec.branchCondition(state_node.getState());
-    var (s1_state, s2_state) := Exec.execBranch(state_node.getState());
-    s1_pc := state_node.getPC() && bc;
-    s2_pc := state_node.getPC() && !bc;
-    node1 := new Node(s1_state, s1_pc);
-    node2 := new Node(s2_state, s2_pc);
-    if !sat(s1_pc) {
+    var bc := Exec.branchCondition(state_node.state);
+    var (s1_state, s2_state) := Exec.execBranch(state_node.state);
+    var s1_pc := SatLib.and(state_node.pc, bc);
+    var s2_pc := SatLib.and(state_node.pc, SatLib.not(bc));
+    var node1 := new Node(s1_state, s1_pc);
+    var node2 := new Node(s2_state, s2_pc);
+    if !SatLib.sat(s1_pc) {
       scheduler.RightEnqueue(node2);
-    } else if !sat(s2_pc) {
+    } else if !SatLib.sat(s2_pc) {
       scheduler.LeftEnqueue(node1);
     } else {
       scheduler.DoubleEnqueue(node1, node2);
     }
     
   } else {  // Not Branch //Left enqueue in this case
-    scheduler.LeftEnqueue(Exec.exec(state_node.getState()));
+    var new_state := Exec.exec(state_node.state);
+    var new_node := new Node(new_state, state_node.pc);
+    scheduler.LeftEnqueue(new_node);
   }
 }

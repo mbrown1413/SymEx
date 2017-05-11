@@ -120,7 +120,7 @@ class {:autocontracts} TreeQueue
     d := match a[start] case Some(node) => node;
   }
   
-  function is_empty(): bool
+  function isEmpty(): bool
   //{ }  //TODO
 }
 
@@ -149,7 +149,7 @@ method main() returns (tree: array<NodeMaybe>)
 {
   var scheduler := new TreeQueue();
 
-  while !scheduler.is_empty()
+  while !scheduler.isEmpty()
   {
     var state_node := scheduler.Dequeue();
     if state_node != null{

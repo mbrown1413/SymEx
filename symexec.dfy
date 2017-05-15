@@ -99,7 +99,7 @@ class {:autocontracts} TreeQueue
     b := a;
     b[2*(start-1)+1]:= Some(d);
     b[2*(start-1)+2]:= None;
-    a, end := b, 2*(start-1)+2;
+    a, end := b, 2*(start-1)+1;
   }
   
   method RightEnqueue(d: Node)
@@ -121,7 +121,9 @@ class {:autocontracts} TreeQueue
   }
   
   function isEmpty(): bool
-  //{ }  //TODO
+  { 
+  bool := (a[end]== None);
+  } 
 }
 
 method main() returns (tree: array<NodeMaybe>)

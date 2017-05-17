@@ -24,9 +24,9 @@
 
 module AbstractSatLib {
     type Equation
-    function sat(f1: Equation): bool
-    function and(f1: Equation, f2: Equation): Equation
-    function not(f1: Equation): Equation
+    function method sat(f1: Equation): bool
+    function method and(f1: Equation, f2: Equation): Equation
+    function method not(f1: Equation): Equation
 }
 
 module AbstractExecutor {
@@ -38,7 +38,7 @@ module AbstractExecutor {
 }
 import opened Exec : AbstractExecutor
 
-function isLeaf(nodeIndex: int, tree:array<Node>): bool
+function method isLeaf(nodeIndex: int, tree:array<Node>): bool
 {
   (tree[2*nodeIndex+1] == null) && (tree[2*nodeIndex+2] == null)
 }
@@ -118,13 +118,14 @@ class {:autocontracts} TreeQueue
     d := match a[start] case Some(node) => node;
   }
   
-  function isEmpty(): bool
+  function method isEmpty(): bool
   { 
-  bool := (a[end]== None);
+    a[end] == None
   } 
 }
 
 method main() returns (tree: array<NodeMaybe>)
+  decreases *  // Possibly non-terminating
   //King Prop 1
   ensures forall i ::
     var node_i := match tree[i] case Some(node) => node;
@@ -150,6 +151,7 @@ method main() returns (tree: array<NodeMaybe>)
   var scheduler := new TreeQueue();
 
   while !scheduler.isEmpty()
+    decreases *  // Possibly non-terminating
   {
     var state_node := scheduler.Dequeue();
     if state_node != null{

@@ -33,10 +33,8 @@ module AbstractExecutor {
   import opened SatLib : AbstractSatLib
 
   type State
-  function isBranch(s: State): bool
-  function branchCondition(s: State): SatLib.Equation
-  function execBranch(s: State): (State, State)
-  function exec(s: State): State
+  function method branchCondition(s: State): SatLib.Equation
+  function method exec(s: State): (State, State)
 }
 import opened Exec : AbstractExecutor
 
@@ -165,25 +163,17 @@ method main() returns (tree: array<NodeMaybe>)
 
 method forkable(scheduler: TreeQueue, state_node: Node)
 {
-  if (Exec.isBranch(state_node.state)) {
-  
-    var bc := Exec.branchCondition(state_node.state);
-    var (s1_state, s2_state) := Exec.execBranch(state_node.state);
-    var s1_pc := SatLib.and(state_node.pc, bc);
-    var s2_pc := SatLib.and(state_node.pc, SatLib.not(bc));
-    var node1 := new Node(s1_state, s1_pc);
-    var node2 := new Node(s2_state, s2_pc);
-    if !SatLib.sat(s1_pc) {
-      scheduler.RightEnqueue(node2);
-    } else if !SatLib.sat(s2_pc) {
-      scheduler.LeftEnqueue(node1);
-    } else {
-      scheduler.DoubleEnqueue(node1, node2);
-    }
-    
-  } else {  // Not Branch //Left enqueue in this case
-    var new_state := Exec.exec(state_node.state);
-    var new_node := new Node(new_state, state_node.pc);
-    scheduler.LeftEnqueue(new_node);
+  var bc := Exec.branchCondition(state_node.state);
+  var (s1_state, s2_state) := Exec.exec(state_node.state);
+  var s1_pc := SatLib.and(state_node.pc, bc);
+  var s2_pc := SatLib.and(state_node.pc, SatLib.not(bc));
+  var node1 := new Node(s1_state, s1_pc);
+  var node2 := new Node(s2_state, s2_pc);
+  if !SatLib.sat(s1_pc) {
+    scheduler.RightEnqueue(node2);
+  } else if !SatLib.sat(s2_pc) {
+    scheduler.LeftEnqueue(node1);
+  } else {
+    scheduler.DoubleEnqueue(node1, node2);
   }
 }

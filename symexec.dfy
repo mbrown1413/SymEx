@@ -23,17 +23,23 @@
 //conforms to the solver's interface.
 
 module AbstractSatLib {
-    type Equation
-    function method sat(f1: Equation): bool
-    function method and(f1: Equation, f2: Equation): Equation
-    function method not(f1: Equation): Equation
+
+    type BoolExpr
+    function method sat(f1: BoolExpr): bool
+    function method and(f1: BoolExpr, f2: BoolExpr): BoolExpr
+    function method not(f1: BoolExpr): BoolExpr
+
+    type IntExpr
+    function method add(f1: IntExpr, f2: IntExpr): IntExpr
+    function method cmp(f1: IntExpr, f2: IntExpr): BoolExpr
+
 }
 
 module AbstractExecutor {
   import opened SatLib : AbstractSatLib
 
   type State
-  function method branchCondition(s: State): SatLib.Equation
+  function method branchCondition(s: State): SatLib.BoolExpr
   function method exec(s: State): (State, State)
 }
 import opened Exec : AbstractExecutor
@@ -46,12 +52,12 @@ function method isLeaf(nodeIndex: int, tree:array<Node>): bool
 class {:autocontracts} Node
 {
   var state: State;
-  var pc: SatLib.Equation;
-  constructor (input_state: State, input_pc: SatLib.Equation )
+  var pc: SatLib.BoolExpr;
+  constructor (input_state: State, input_pc: SatLib.BoolExpr)
   {
     state, pc := input_state, input_pc;
   }
-  method getPC() returns (retPC: SatLib.Equation)
+  method getPC() returns (retPC: SatLib.BoolExpr)
   {
     retPC := pc;
   }

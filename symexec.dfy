@@ -23,6 +23,7 @@
 //conforms to the solver's interface.
 
 include "Dpll.dfy"
+include "PropLogic.dfy"
 
 module AbstractSatLib {
 
@@ -40,11 +41,17 @@ module AbstractSatLib {
 module AbstractExecutor {
   import opened SatLib : AbstractSatLib
 
+
+
   type State
   function method branchCondition(s: State): SatLib.BoolExpr
   function method exec(s: State): (State, State)
 }
+
+
 import opened Exec : AbstractExecutor
+import opened dpll : DPLL
+import opened PL : PropLogic
 
 function method isLeaf(nodeIndex: int, tree:array<Node>): bool
 {
@@ -92,30 +99,30 @@ class {:autocontracts} TreeQueue
   {
     var b := new NodeMaybe[3 * a.Length];
     b := a;
-    b[2*(start-1)+1]:= Some(lc);
-    b[2*(start-1)+2]:= Some(rc);
+    b[2*(start-1)+1]:= NodeMaybe.Some(lc);
+    b[2*(start-1)+2]:= NodeMaybe.Some(rc);
     a, end := b, 2*(start-1)+2;
   }
   
   method LeftEnqueue(d: Node)
-    ensures a[2*(start-1)+1] == Some(d);
-    ensures a[2*(start-1)+2] == None;
+    ensures a[2*(start-1)+1] == NodeMaybe.Some(d);
+    ensures a[2*(start-1)+2] == NodeMaybe.None;
   {
     var b := new NodeMaybe[3 * a.Length];
     b := a;
-    b[2*(start-1)+1]:= Some(d);
-    b[2*(start-1)+2]:= None;
+    b[2*(start-1)+1]:= NodeMaybe.Some(d);
+    b[2*(start-1)+2]:= NodeMaybe.None;
     a, end := b, 2*(start-1)+1;
   }
   
   method RightEnqueue(d: Node)
-    ensures a[2*(start-1)+1] == None;
-    ensures a[2*(start-1)+2] == Some(d);
+    ensures a[2*(start-1)+1] == NodeMaybe.None;
+    ensures a[2*(start-1)+2] == NodeMaybe.Some(d);
   {
     var b := new NodeMaybe[3 * a.Length];
     b := a;
-    b[2*(start-1)+1]:= None;
-    b[2*(start-1)+2]:= Some(d);
+    b[2*(start-1)+1]:= NodeMaybe.None;
+    b[2*(start-1)+2]:= NodeMaybe.Some(d);
     a, end := b, 2*(start-1)+2;
   }
   
@@ -128,7 +135,7 @@ class {:autocontracts} TreeQueue
   
   function method isEmpty(): bool
   { 
-    a[end] == None
+    a[end] == NodeMaybe.None
   } 
 }
 
@@ -185,14 +192,20 @@ method forkable(scheduler: TreeQueue, state_node: Node)
     scheduler.LeftEnqueue(node1);
   } else {
     scheduler.DoubleEnqueue(node1, node2);
-  }
+}
+}
 
-method SAT(formula: Formula) returns (sat_bool: Boolean){
-  if Dpll(formula)==None{
-   sat_bool := false;
+method SAT(formula: Formula) returns (sat_bool: bool)
+decreases *
+{
+var alpha : Option<Assignment> := dpll.DPLL(formula);
+
+ var temp_sat_bool := false;
+  if !(alpha == Option<Assignment>.None){
+   temp_sat_bool := true;
   }
-  else{
-   sat_bool := true;
-  }
+sat_bool := temp_sat_bool;
 }
-}
+
+
+

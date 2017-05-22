@@ -190,7 +190,7 @@ method Var_set_to_seq(s : set<Var>, sv : seq<Var>) returns (s' : seq<Var>)
 		}
 		i := i + 1;
 	}
-	return s';
+	//return s';
 }
 
 method cut_interpretation(I : Interpretation, level : nat, sv : seq<Var>) returns (I' : Interpretation)
@@ -204,7 +204,7 @@ method cut_interpretation(I : Interpretation, level : nat, sv : seq<Var>) return
 		}
 		i := i + 1;
 	}
-	return I';
+	//return I';
 }
 
 method get_conflict_causes(I : Interpretation, c : Clause, sv : seq<Var>) returns(s' : seq<Var>)

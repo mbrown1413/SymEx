@@ -1,6 +1,7 @@
 #Exporting path to dafny, e.g.:
 # Marie:   export PATH=$PATH:/Users/ada/git/verisec/dafny/Binaries/
-# Alyssa: export PATH=$PATH:/Users/abyrnes1/Documents/dafny
+# Alyssa:  export PATH=$PATH:/Users/abyrnes1/Documents/dafny
+# Michael: put yours here
 
 #Compiling SAT Solver:
 #Compile the dafny programs individually:

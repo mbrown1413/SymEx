@@ -22,6 +22,8 @@
 //beyond a proof, that means calling a solver from dafny, and ensuring the PC
 //conforms to the solver's interface.
 
+include "Dpll.dfy"
+
 module AbstractSatLib {
 
     type BoolExpr
@@ -184,4 +186,13 @@ method forkable(scheduler: TreeQueue, state_node: Node)
   } else {
     scheduler.DoubleEnqueue(node1, node2);
   }
+
+method SAT(formula: Formula) returns (sat_bool: Boolean){
+  if Dpll(formula)==None{
+   sat_bool := false;
+  }
+  else{
+   sat_bool := true;
+  }
+}
 }

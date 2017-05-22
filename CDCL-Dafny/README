@@ -1,0 +1,9 @@
+#Exporting path to dafny, e.g.:
+#    export PATH=$PATH:/Users/ada/git/verisec/dafny/Binaries/
+
+#Compile the dafny programs individually:
+dafny PropLogic.dfy && dafny Io.dfy && dafny Dimacs.dfy
+
+#Compile with C# code (I am not 100% sure this is
+#doing what we think it is):
+dafny Dpll.dfy IoNative.cs DimacsNative.cs

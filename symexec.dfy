@@ -51,7 +51,6 @@ module AbstractExecutor {
 
 import opened Exec : AbstractExecutor
 import opened dpll : DPLL
-import opened PL : PropLogic
 
 function method isLeaf(nodeIndex: int, tree:array<Node>): bool
 {

@@ -194,6 +194,10 @@ method forkable(scheduler: TreeQueue, state_node: Node)
 }
 }
 
+module SAT_Func{
+import opened PropLogic
+import opened dpll : DPLL
+
 method SAT(formula: Formula) returns (sat_bool: bool)
 decreases *
 {
@@ -206,5 +210,6 @@ var alpha : Option<Assignment> := dpll.DPLL(formula);
 sat_bool := temp_sat_bool;
 }
 
+}
 
 

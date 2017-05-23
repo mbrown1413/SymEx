@@ -11,3 +11,6 @@ dafny PropLogic.dfy && dafny Io.dfy && dafny Dimacs.dfy
 #Compile with C# code (I am not 100% sure this is
 #doing what we think it is):
 dafny Dpll.dfy IoNative.cs DimacsNative.cs
+
+#After this you may compile symexe.dfy
+dafny symexec.dfy

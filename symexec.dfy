@@ -79,7 +79,7 @@ class {:autocontracts} TreeQueue
   var a: array<NodeMaybe>;
   var start: int, end: int;
   predicate Valid() {
-    (a != null) && (a.Length != 0) && (0 <= start <= end <= a.Length)
+    (a != null) && (0 <= start <= end < a.Length) && a.Length > 1
   }
   constructor ()
   {
@@ -93,14 +93,28 @@ class {:autocontracts} TreeQueue
   }
 
   method DoubleEnqueue(lc: Node, rc: Node)
-    ensures match a[2*(start-1)+1] case Some(n) => n == lc;
-    ensures match a[2*(start-1)+2] case Some(node) => node == rc;
+    ensures 0 <= 2*start + 2 < a.Length
+    ensures match a[2*start + 1]
+        case Some(n) => n == lc
+        case None => false
+    ensures match a[2*start + 2]
+        case Some(node) => node == rc
+        case None => false
   {
-    var b := new NodeMaybe[3 * a.Length];
-    b := a;
-    b[2*(start-1)+1]:= NodeMaybe.Some(lc);
-    b[2*(start-1)+2]:= NodeMaybe.Some(rc);
-    a, end := b, 2*(start-1)+2;
+
+    var b := new NodeMaybe[2*(a.Length+1)-1];
+    assert a.Length < b.Length;
+
+    // Copy a to b
+    forall i | 0 <= i < a.Length < b.Length
+    {
+      b[i] := a[i];
+    }
+    assert forall k :: 0 <= k < a.Length < b.Length ==> a[k] == b[k];
+
+    b[2*start + 1]:= NodeMaybe.Some(lc);
+    b[2*start + 2]:= NodeMaybe.Some(rc);
+    a, end := b, 2*start + 2;
   }
   
   method LeftEnqueue(d: Node)
@@ -195,7 +209,6 @@ method forkable(scheduler: TreeQueue, state_node: Node)
 }
 
 module SAT_Func{
-import opened PropLogic
 import opened dpll : DPLL
 
 method SAT(formula: Formula) returns (sat_bool: bool)

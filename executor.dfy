@@ -1,8 +1,25 @@
 
+// An executor executes an instruction set or language as a state
+// machine. For a given state "s", "exec(s)" returns two possible next
+// states. "branchCondition(s)" returns the condition under which the
+// first of those states should be taken. When "s" is executing a
+// non-branching instruction, it is common for "state(s)" to return (s2,
+// null), and for "branchCondition(s)" to return true.
+module AbstractExecutor {
+  import opened SatLib : AbstractSatLib
+
+  type State
+  function method branchCondition(s: State): SatLib.BoolExpr
+  function method exec(s: State): (State, State)
+}
+
+
+// Implements a basic subset of the LLVM intermediate representation.
+//   http://llvm.org/docs/LangRef.html
 module LlvmExecutor {
   import opened SatLib : AbstractSatLib
 
-  type Reg = int;  // Index into map of registers, State.regs
+  type Reg = int  // Index into map of registers, State.regs
 
   datatype Instr =
     Add(dest: Reg, op1: Reg, op2: Reg)

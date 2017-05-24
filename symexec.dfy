@@ -24,6 +24,7 @@
 
 include "Dpll.dfy"
 include "PropLogic.dfy"
+include "scheduler.dfy"
 
 module AbstractSatLib {
 
@@ -38,126 +39,35 @@ module AbstractSatLib {
 
 }
 
+// An executor executes an instruction set or language as a state
+// machine. For a given state "s", "exec(s)" returns two possible next
+// states. "branchCondition(s)" returns the condition under which the
+// first of those states should be taken. When "s" is executing a
+// non-branching instruction, it is common for "state(s)" to return (s2,
+// null), and for "branchCondition(s)" to return true.
 module AbstractExecutor {
   import opened SatLib : AbstractSatLib
-
-
 
   type State
   function method branchCondition(s: State): SatLib.BoolExpr
   function method exec(s: State): (State, State)
 }
 
-
 import opened Exec : AbstractExecutor
 import opened dpll : DPLL
 
-function method isLeaf(nodeIndex: int, tree:array<Node>): bool
-{
-  (tree[2*nodeIndex+1] == null) && (tree[2*nodeIndex+2] == null)
-}
 
-class {:autocontracts} Node
-{
-  var state: State;
-  var pc: SatLib.BoolExpr;
-  constructor (input_state: State, input_pc: SatLib.BoolExpr)
-  {
-    state, pc := input_state, input_pc;
-  }
-  method getPC() returns (retPC: SatLib.BoolExpr)
-  {
-    retPC := pc;
-  }
-}
-datatype NodeMaybe = Some(v:Node) | None
-
-// Queue implementation based on "Developing Verified Programs with Dafny", figure 4.
-// https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml233.pdf
-class {:autocontracts} TreeQueue
-{
-  var a: array<NodeMaybe>;
-  var start: int, end: int;
-  predicate Valid() {
-    (a != null) && (0 <= start <= end < a.Length) && a.Length > 1
-  }
-  constructor ()
-  {
-    a, start, end := new NodeMaybe[10], 0, 0;
-  }
-  
-  method getTree() returns (T: array<NodeMaybe>)
-  {
-    T := new NodeMaybe[a.Length];
-    T := a;
-  }
-
-  method DoubleEnqueue(lc: Node, rc: Node)
-    ensures 0 <= 2*start + 2 < a.Length
-    ensures match a[2*start + 1]
-        case Some(n) => n == lc
-        case None => false
-    ensures match a[2*start + 2]
-        case Some(node) => node == rc
-        case None => false
-  {
-
-    var b := new NodeMaybe[2*(a.Length+1)-1];
-    assert a.Length < b.Length;
-
-    // Copy a to b
-    forall i | 0 <= i < a.Length < b.Length
-    {
-      b[i] := a[i];
-    }
-    assert forall k :: 0 <= k < a.Length < b.Length ==> a[k] == b[k];
-
-    b[2*start + 1]:= NodeMaybe.Some(lc);
-    b[2*start + 2]:= NodeMaybe.Some(rc);
-    a, end := b, 2*start + 2;
-  }
-  
-  method LeftEnqueue(d: Node)
-    ensures a[2*(start-1)+1] == NodeMaybe.Some(d);
-    ensures a[2*(start-1)+2] == NodeMaybe.None;
-  {
-    var b := new NodeMaybe[3 * a.Length];
-    b := a;
-    b[2*(start-1)+1]:= NodeMaybe.Some(d);
-    b[2*(start-1)+2]:= NodeMaybe.None;
-    a, end := b, 2*(start-1)+1;
-  }
-  
-  method RightEnqueue(d: Node)
-    ensures a[2*(start-1)+1] == NodeMaybe.None;
-    ensures a[2*(start-1)+2] == NodeMaybe.Some(d);
-  {
-    var b := new NodeMaybe[3 * a.Length];
-    b := a;
-    b[2*(start-1)+1]:= NodeMaybe.None;
-    b[2*(start-1)+2]:= NodeMaybe.Some(d);
-    a, end := b, 2*(start-1)+2;
-  }
-  
-  method Dequeue() returns (d: Node)
-    ensures a[start] == a[old(start)+1];
-  {
-    start := start+1;
-    d := match a[start] case Some(node) => node;
-  }
-  
-  function method isEmpty(): bool
-  { 
-    a[end] == NodeMaybe.None
-  } 
-}
-
+// The core of the symbolic execution engine. Explore state in the order
+// according to the scheduler, ensuring that a state is only explored if
+// it can be reached (the path condition leading to it is satisfyable).
 method main() returns (tree: array<NodeMaybe>)
   decreases *  // Possibly non-terminating
+
   //King Prop 1
   ensures forall i ::
     var node_i := match tree[i] case Some(node) => node;
     0<=i<=tree.Length ==> SatLib.sat(node_i.pc);
+
   //King Prop 2
   /*
   ensures forall j,k ::
@@ -175,6 +85,7 @@ method main() returns (tree: array<NodeMaybe>)
             0<=j<=tree.Length && 0<=k<=tree.Length ==> isLeaf(node_j, tree) && isLeaf(node_k, tree) && j!=k ==> !(SatLib.sat(SatLib.and(node_j.pc, node_k.pc)))
         );
   */
+
 {
   var scheduler := new TreeQueue();
 
@@ -183,15 +94,17 @@ method main() returns (tree: array<NodeMaybe>)
   {
     var state_node := scheduler.Dequeue();
     if state_node != null{
-      forkable(scheduler, state_node);
+      step_execution(scheduler, state_node);
     }
-    
+
   }
   tree := scheduler.getTree();
   return tree;
 }
 
-method forkable(scheduler: TreeQueue, state_node: Node)
+// Enqueue the children of state_node, but only if their path condition
+// is satisfyable.
+method step_execution(scheduler: TreeQueue, state_node: Node)
 {
   var bc := Exec.branchCondition(state_node.state);
   var (s1_state, s2_state) := Exec.exec(state_node.state);
@@ -205,7 +118,7 @@ method forkable(scheduler: TreeQueue, state_node: Node)
     scheduler.LeftEnqueue(node1);
   } else {
     scheduler.DoubleEnqueue(node1, node2);
-}
+  }
 }
 
 module SAT_Func{

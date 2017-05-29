@@ -63,10 +63,12 @@ import opened dpll : DPLL
 method main() returns (tree: array<NodeMaybe>)
   decreases *  // Possibly non-terminating
 
-  //King Prop 1
-  ensures forall i ::
-    var node_i := match tree[i] case Some(node) => node;
-    0<=i<=tree.Length ==> SatLib.sat(node_i.pc);
+  // King Prop 1
+  // All nodes in the tree should be satisfyable.
+  ensures tree != null
+  ensures forall i :: 0 <= i < tree.Length ==> match tree[i]
+    case Some(node) => node != null && SatLib.sat(node.pc)
+    case None => false;
 
   //King Prop 2
   /*
@@ -91,6 +93,10 @@ method main() returns (tree: array<NodeMaybe>)
 
   while !scheduler.isEmpty()
     decreases *  // Possibly non-terminating
+    invariant scheduler.a != null
+    invariant forall i :: 0 <= i < scheduler.a.Length ==> match scheduler.a[i]
+      case Some(node) => node != null && SatLib.sat(node.pc)
+      case None => false;
   {
     var state_node := scheduler.Dequeue();
     if state_node != null{
@@ -98,13 +104,15 @@ method main() returns (tree: array<NodeMaybe>)
     }
 
   }
-  tree := scheduler.getTree();
+  tree := scheduler.a;
   return tree;
 }
 
 // Enqueue the children of state_node, but only if their path condition
 // is satisfyable.
 method step_execution(scheduler: TreeQueue, state_node: Node)
+  requires scheduler != null
+  requires state_node != null
 {
   var bc := Exec.branchCondition(state_node.state);
   var (s1_state, s2_state) := Exec.exec(state_node.state);

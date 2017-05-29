@@ -24,7 +24,7 @@ datatype NodeMaybe = Some(v:Node) | None
 // Alternate array-base queue implementation found in:
 //   "Developing Verified Programs with Dafny", figure 4.
 //   https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml233.pdf
-class {:autocontracts} TreeQueue
+class {:autocontracts false} TreeQueue
 {
 
   // Stores tree for states and path condition
@@ -40,6 +40,10 @@ class {:autocontracts} TreeQueue
   }
 
   constructor ()
+    ensures a != null
+    ensures forall i :: 0 <= i < a.Length ==> match a[i]
+      case Some(node) => node != null && SatLib.sat(node.pc)
+      case None => false;
   {
     a, start, end := new NodeMaybe[10], 0, 0;
   }
@@ -101,7 +105,9 @@ class {:autocontracts} TreeQueue
     ensures a[start] == a[old(start)+1];
   {
     start := start+1;
-    d := match a[start] case Some(node) => node;
+    d := match a[start]
+      case Some(node) => node
+      case None => null;
   }
   
   function method isEmpty(): bool

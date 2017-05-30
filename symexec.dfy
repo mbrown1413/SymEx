@@ -70,23 +70,18 @@ method main() returns (tree: array<NodeMaybe>)
     case Some(node) => node != null && SatLib.sat(node.pc)
     case None => false;
 
-  //King Prop 2
-  /*
+  // King Prop 2
+  // Path conditions in leaf nodes do not overlap.
+  // That is, any assignment of variables leads to exactly one leaf node.
   ensures forall j,k ::
-    var node_j := match tree[j] case Some(node) => node;
-    var node_k := match tree[k] case Some(node) => node;
-    0<=j<=tree.Length && 0<=k<=tree.Length ==> isLeaf(node_j, tree) && isLeaf(node_k, tree) && j!=k ==> !(SatLib.sat(SatLib.and(node_j.pc, node_k.pc)))
-  */
-  /*
-    match tree[j]
-      case None => false
-      case Some(node_j) =>
-        (match tree[k]
-          case None => false
-          case Some(node_k) =>
-            0<=j<=tree.Length && 0<=k<=tree.Length ==> isLeaf(node_j, tree) && isLeaf(node_k, tree) && j!=k ==> !(SatLib.sat(SatLib.and(node_j.pc, node_k.pc)))
-        );
-  */
+    var node_j := match tree[j] case Some(node) => node case None => null;
+    var node_k := match tree[k] case Some(node) => node case None => null;
+    node_j != null && node_k != null && j != k &&
+    0 <= j < tree.Length &&
+    0 <= k < tree.Length &&
+    isLeaf(j, tree) &&
+    isLeaf(k, tree)
+    ==> !(SatLib.sat(SatLib.and(node_j.pc, node_k.pc)))
 
 {
   var scheduler := new TreeQueue();

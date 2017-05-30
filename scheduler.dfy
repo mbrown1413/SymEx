@@ -117,7 +117,7 @@ class {:autocontracts false} TreeQueue
   } 
 }
 
-function method isLeaf(nodeIndex: int, tree:array<Node>): bool
+function method isLeaf(nodeIndex: int, tree:array<NodeMaybe>): bool
 {
-  (tree[2*nodeIndex+1] == null) && (tree[2*nodeIndex+2] == null)
+  (tree[2*nodeIndex+1].Some?) && (tree[2*nodeIndex+2].Some?)
 }

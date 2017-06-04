@@ -37,9 +37,6 @@ module AbstractSatLib {
     function method add(f1: IntExpr, f2: IntExpr): IntExpr
     function method cmp(f1: IntExpr, f2: IntExpr): BoolExpr
 
-    //function method {:verify false} copyBool(f1: BoolExpr): BoolExpr
-    //  ensures sat(f1) == sat(copyBool(f1))
-
     function method {:verify false} sat(f1: BoolExpr): bool
 
       // Used for King Property 1
@@ -101,9 +98,6 @@ method symex() returns (tree: array<NodeMaybe>)
   ensures forall i :: 0 <= i < tree.Length ==> match tree[i]
     case Some(node) => node != null && SatLib.sat(node.pc)
     case None => true;
-  //requires forall i :: 0 <= i < scheduler.a.Length ==> match scheduler.a[i]
-  //  case Some(node) => node != null && SatLib.sat(node.pc)
-  //  case None => true;
 
   // King Property 2
   // Path conditions in leaf nodes do not overlap.
@@ -118,30 +112,16 @@ method symex() returns (tree: array<NodeMaybe>)
   //  ==> !SatLib.sat(SatLib.and(node_i.pc, node_j.pc))
 
 {
-  var initState := getInitialState();
-  var scheduler := new TreeQueue(initState);
-  assert fresh(scheduler);
-
-  assert forall i :: 0 <= i < scheduler.a.Length ==> match scheduler.a[i]
-    case Some(node) => node != null && SatLib.sat(node.pc)
-    case None => true;
+  var scheduler := new TreeQueue(getInitialState());
 
   assert !scheduler.isEmpty();
   while !scheduler.isEmpty()
-    modifies scheduler
-    modifies scheduler.a
-
     decreases *  // Possibly non-terminating
     invariant scheduler.a != null
     invariant scheduler.Valid()
 
     // Nodes are always satisfyable (else they are not enqueued)
     // Used to verify King Prop 1
-    invariant forall i :: 0 <= i <= scheduler.end ==>
-      match scheduler.a[i]
-        case Some(node) => node != null && SatLib.sat(node.pc)
-        case None => true;
-
     invariant forall i :: 0 <= i < scheduler.a.Length ==> match scheduler.a[i]
       case Some(node) => node != null && SatLib.sat(node.pc)
       case None => true;
@@ -161,8 +141,7 @@ method symex() returns (tree: array<NodeMaybe>)
   {
     var state_node := scheduler.Dequeue();
     if state_node != null {
-      var node1, node2;
-      node1, node2 := step_execution(scheduler, state_node);
+      step_execution(scheduler, state_node);
     }
 
   }
@@ -172,7 +151,7 @@ method symex() returns (tree: array<NodeMaybe>)
 
 // Enqueue the children of state_node, but only if their path condition
 // is satisfyable.
-method step_execution(scheduler: TreeQueue, state_node: Node) returns (n1: Node, n2: Node)
+method step_execution(scheduler: TreeQueue, state_node: Node)
   requires scheduler != null
   requires scheduler.a != null
   requires state_node != null
@@ -182,24 +161,13 @@ method step_execution(scheduler: TreeQueue, state_node: Node) returns (n1: Node,
   ensures scheduler.a != null
   ensures scheduler.Valid()
 
-  requires forall i :: 0 <= i <= scheduler.end ==>
-    match scheduler.a[i]
-      case Some(node) => node != null && SatLib.sat(node.pc)
-      case None => true;
-  ensures forall i :: 0 <= i <= scheduler.end ==>
-    match scheduler.a[i]
-      case Some(node) => node != null && SatLib.sat(node.pc)
-      case None => true;
-
+  // King 1
   requires forall i :: 0 <= i < scheduler.a.Length ==> match scheduler.a[i]
     case Some(node) => node != null && SatLib.sat(node.pc)
     case None => true;
   ensures forall i :: 0 <= i < scheduler.a.Length ==> match scheduler.a[i]
     case Some(node) => node != null && SatLib.sat(node.pc)
     case None => true;
-
-  ensures n1 == null || fresh(n1)
-  ensures n2 == null || fresh(n2)
 
   modifies scheduler
 {
@@ -209,31 +177,21 @@ method step_execution(scheduler: TreeQueue, state_node: Node) returns (n1: Node,
   var s1_pc := SatLib.and(state_node.pc, bc);
   var s2_pc := SatLib.and(state_node.pc, SatLib.not(bc));
 
-  // Used for King 1
-  assert SatLib.sat(state_node.pc);
-  assert SatLib.sat(s1_pc) || SatLib.sat(s2_pc);
-
   var node1: Node := null;
   var node2: Node := null;
   var node1_maybe: NodeMaybe := NodeMaybe.None;
   var node2_maybe: NodeMaybe := NodeMaybe.None;
   if !SatLib.sat(s1_pc) {
-
-    assert SatLib.sat(s2_pc);
     node2 := new Node(s2_state, s2_pc);
     node1_maybe, node2_maybe := scheduler.Enqueue(null, node2);
   } else if !SatLib.sat(s2_pc) {
-    assert SatLib.sat(s1_pc);
     node1 := new Node(s1_state, s1_pc);
     node1_maybe, node2_maybe := scheduler.Enqueue(node1, null);
   } else {
-    assert SatLib.sat(s1_pc);
-    assert SatLib.sat(s2_pc);
     node1 := new Node(s1_state, s1_pc);
     node2 := new Node(s2_state, s2_pc);
     node1_maybe, node2_maybe := scheduler.Enqueue(node1, node2);
   }
-  return node1, node2;
 }
 
 module SAT_Func{

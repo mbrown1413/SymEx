@@ -39,8 +39,6 @@ class {:autocontracts false} TreeQueue
   // end points to the highest index None enqueued.
   var start: int, end: int;
 
-  //ghost var states: set<object>;
-
   predicate Valid()
     reads this
   {
@@ -60,11 +58,7 @@ class {:autocontracts false} TreeQueue
                          node.pc == getTrueBool() &&
                          node.state == initState
       case None => false;
-    ensures forall i :: 0 <= i <= end ==> match a[i]
-      case Some(node) => node != null && SatLib.sat(node.pc)
-      case None => true;
     ensures !isEmpty()
-    //ensures fresh(this)
     ensures fresh(a)
     ensures fresh(a[0])
   {
@@ -73,15 +67,12 @@ class {:autocontracts false} TreeQueue
     end := 0;
     var node := new Node(initState, getTrueBool());
     a[0] := NodeMaybe.Some(node);
-    //states := {};
   }
 
   method Enqueue(lc: Node, rc: Node) returns (lc_node: NodeMaybe, rc_node: NodeMaybe)
     requires Valid()
     ensures Valid()
     modifies this
-    //modifies a
-    //modifies states
 
     requires start >= 0
     ensures 0 <= 2*start + 1 < a.Length
@@ -96,14 +87,6 @@ class {:autocontracts false} TreeQueue
     // Used for King Property 1
     requires lc == null || SatLib.sat(lc.pc)
     requires rc == null || SatLib.sat(rc.pc)
-    requires forall i :: 0 <= i <= end ==>
-      match a[i]
-        case Some(node) => node != null && SatLib.sat(node.pc)
-        case None => true;
-    ensures forall i :: 0 <= i <= end ==>
-      match a[i]
-        case Some(node) => node != null && SatLib.sat(node.pc)
-        case None => true;
     requires forall i :: 0 <= i < a.Length ==> match a[i]
       case Some(node) => node != null && SatLib.sat(node.pc)
       case None => true;
@@ -112,43 +95,19 @@ class {:autocontracts false} TreeQueue
       case None => true;
 
     ensures fresh(a)
-    //ensures a == old(a) || fresh(a)
-    //ensures lc_node == null || match
-    //ensures forall i :: 0 <= i < a.Length ==> fresh(a[i]) || a[i] == old(a[i])
-    //ensures forall i :: 0 <= i < a.Length ==> fresh(a[i]) || a[i].None? || (i < old(a.Length) && a[i] == old(a[i]))
   {
-    //states := states + {lc.state, rc.state};
     var l_index := 2*start + 1;  // right/left children indices
     var r_index := 2*start + 2;
 
     // Expand array if needed
-    /*
-    if a.Length <= r_index {
-      var new_len := 2*(a.Length+1)-1;  // Next (2^i)-1
-      assert new_len > r_index;
-      var b := new NodeMaybe[new_len];
-      assert a.Length < b.Length;
-      forall i | 0 <= i < b.Length
-      { // Set to None
-        b[i] := NodeMaybe.None;
-      }
-      forall i | 0 <= i < a.Length < b.Length
-      { // Copy a to b
-        b[i] := a[i];
-      }
-      assert forall k :: 0 <= k < a.Length < b.Length ==> a[k] == b[k];
-      a := b;
-    }
-    */
-    var new_len;
+    var new_len := a.Length;
     if a.Length <= r_index {
       new_len := 2*(a.Length+1)-1;  // Next (2^i)-1
-      assert new_len > r_index;
-    } else {
-      new_len := a.Length;
     }
+    assert new_len > r_index;
+
+    // Create fresh copy of "a"
     var b := new NodeMaybe[new_len];
-    assert a.Length <= b.Length;
     forall i | 0 <= i < b.Length
     { // Set to None
       b[i] := NodeMaybe.None;
@@ -160,51 +119,18 @@ class {:autocontracts false} TreeQueue
     assert forall k :: 0 <= k < a.Length < b.Length ==> a[k] == b[k];
     a := b;
 
-    assert forall i :: 0 <= i <= end ==>
-      match a[i]
-        case Some(node) => node != null && SatLib.sat(node.pc)
-        case None => true;
-    assert forall i :: 0 <= i < a.Length ==>
-      match a[i]
-        case Some(node) => node != null && SatLib.sat(node.pc)
-        case None => true;
-
-    assert a.Length > r_index > l_index >= 0;
-    assert lc == null || SatLib.sat(lc.pc);
-    assert rc == null || SatLib.sat(rc.pc);
-
     lc_node := if lc != null then NodeMaybe.Some(lc) else NodeMaybe.None;
     rc_node := if rc != null then NodeMaybe.Some(rc) else NodeMaybe.None;
-    assert match lc_node
-      case Some(node) => node != null && SatLib.sat(node.pc)
-      case None => true;
-    assert match rc_node
-      case Some(node) => node != null && SatLib.sat(node.pc)
-      case None => true;
     a[l_index] := lc_node;
     a[r_index] := rc_node;
-
-    assert forall i :: 0 <= i <= end ==>
-      match a[i]
-        case Some(node) => node != null && SatLib.sat(node.pc)
-        case None => true;
 
     // Nodes between old end and l_index must be set to null.
     forall i | end < i < l_index
     {
       a[i] := NodeMaybe.None;
     }
-    assert forall i :: end <= i < r_index ==>
-      match a[i]
-        case Some(node) => node != null && SatLib.sat(node.pc)
-        case None => true;
 
     end := r_index;
-
-    assert forall i :: 0 <= i <= end ==>
-      match a[i]
-        case Some(node) => node != null && SatLib.sat(node.pc)
-        case None => true;
 
     return lc_node, rc_node;
   }
@@ -217,19 +143,10 @@ class {:autocontracts false} TreeQueue
     ensures a[start] == a[old(start)+1];
 
     // Used for King Property 1
-    ensures forall i :: 0 <= i <= end ==>
-      match a[i]
-        case Some(node) => node != null && SatLib.sat(node.pc)
-        case None => true;
-    requires forall i :: 0 <= i <= end ==>
-      match a[i]
-        case Some(node) => node != null && SatLib.sat(node.pc)
-        case None => true;
     requires -1 <= start < a.Length-1
     requires match a[start+1]
       case Some(node) => node != null && SatLib.sat(node.pc)
       case None => true;
-    requires start < end
     ensures d == null || SatLib.sat(d.pc)
 
     requires forall i :: 0 <= i < a.Length ==> match a[i]
@@ -247,14 +164,11 @@ class {:autocontracts false} TreeQueue
     d := match a[start]
       case Some(node) => node
       case None => null;
-    assert d == null || SatLib.sat(d.pc);
   }
   
   function method isEmpty(): bool
     requires Valid()
     ensures Valid()
-    reads this
-    reads a
     reads *
 
     requires forall i :: 0 <= i < a.Length ==> match a[i]

@@ -13,4 +13,4 @@ dafny PropLogic.dfy && dafny Io.dfy && dafny Dimacs.dfy
 dafny Dpll.dfy IoNative.cs DimacsNative.cs
 
 #After this you may compile symexe.dfy
-dafny symexec.dfy
+dafny symexec.dfy scheduler.dfy

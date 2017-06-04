@@ -56,11 +56,11 @@ class {:autocontracts false} TreeQueue
     ensures a.Length == 1 && match a[0]
       case Some(node) => node != null &&
                          node.pc == getTrueBool() &&
-                         node.state == initState
+                         node.state == initState &&
+                         fresh(node)
       case None => false;
     ensures !isEmpty()
     ensures fresh(a)
-    ensures fresh(a[0])
   {
     a := new NodeMaybe[1];
     start := -1;

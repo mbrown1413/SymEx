@@ -187,6 +187,7 @@ method step_execution(scheduler: TreeQueue, state_node: Node)
 
 module SAT_Func{
 import opened dpll : DPLL
+import opened PropLogic
 
 method SAT(formula: Formula) returns (sat_bool: bool)
 decreases *

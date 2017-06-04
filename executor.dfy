@@ -9,9 +9,11 @@ module AbstractExecutor {
   import opened SatLib : AbstractSatLib
 
   type State
-  function method branchCondition(s: State): SatLib.BoolExpr
-  function method exec(s: State): (State, State)
+  method getInitialState() returns (s: State)
+  method branchCondition(s: State) returns (cond: SatLib.BoolExpr)
+  method exec(s: State) returns (s1: State, s2: State)
 }
+
 
 
 // Implements a basic subset of the LLVM intermediate representation.
@@ -22,63 +24,62 @@ module LlvmExecutor {
   type Reg = int  // Index into map of registers, State.regs
 
   datatype Instr =
-    Add(dest: Reg, op1: Reg, op2: Reg)
-  | Icmp(dest: Reg, op1: Reg, op2: Reg)
-  | Br(cond: Reg, label1: int, label2: int)
+    Add(add_dest: Reg, add_op1: Reg, add_op2: Reg)
+  | Icmp(icmp_dest: Reg, icmp_op1: Reg, icmp_op2: Reg)
+  | Br(br_cond: Reg, br_label1: int, br_label2: int)
 
-  datatype State = State(ip: int, regs: Map<int, IntExpr>), halted: bool)
+  datatype State = State(ip: int, regs: map<Reg, IntExpr>) | HaltedState
 
-  var program = [
-    Add(0, 1, 2),
-    Icmp(0, 0, 1),
-    Br(0, 0, 3),
-  ];
-
-  function method getInitialState(): State {
-    State(0, map[], false)
+  method program() returns (instrs: array<Instr>) {
+    instrs := new Instr[3];
+    instrs[0] := Add(0, 1, 2);
+    instrs[1] := Icmp(0, 0, 1);
+    instrs[2] := Br(0, 0, 3);
+    return instrs;
   }
 
-  function method branchCondition(s: State): SatLib.Equation {
-    match program[s.ip]
-      case Add(_, _, _): true
-      case Icmp(_, _, _): true
-      case Br(cond, _, _): cond
+  method getInitialState() returns (s: State) {
+    return State(0, map[]);
   }
 
-  function method exec(s: State): (State, State) {
-    if s.halted {
-      (null, null)
+  method branchCondition(s: State) returns (cond: SatLib.BoolExpr) {
+    var prog := program();
+    return match prog[s.ip]
+      case Add(_, _, _) => getTrueBool()
+      case Icmp(_, _, _) => getTrueBool()
+      case Br(cond, _, _) => cmp(s.regs[cond], intConst(1));
+  }
+
+  method exec(s: State) returns (s1: State, s2: State) {
+    if s.HaltedState? {
+      return HaltedState, HaltedState;
     } else {
 
-      match program[s.ip]
+      var prog := program();
 
-        case Add(dest, op1, op2):
-          (State(
+      match prog[s.ip] {
+
+        case Add(dest, op1, op2) =>
+          return State(
             s.ip + 1,
-            s.regs[dest := add(op1, op2)],
-            false
-          ), null)
+            s.regs[dest := add(s.regs[op1], s.regs[op2])]
+          ), HaltedState;
 
-        case Icmp(dest, op1, op2):
-          (State(
+        case Icmp(dest, op1, op2) =>
+          return State(
             s.ip + 1,
-            s.regs[dest := cmp(op1, op2)],
-            false
-          ), null)
+            s.regs[dest := boolToInt(cmp(s.regs[op1], s.regs[op2]))]
+          ), HaltedState;
 
-        case Br(cond, label1, label2):
-          (
-            State(
-              label1
-              s.regs,
-              false
-            ),
-            State(
-              label2
-              s.regs,
-              false
-            )
-          )
+        case Br(cond, label1, label2) =>
+          return State(
+            label1,
+            s.regs
+          ), State(
+            label2,
+            s.regs
+          );
+      }
 
     }
   }

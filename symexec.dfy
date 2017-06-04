@@ -25,6 +25,7 @@
 include "Dpll.dfy"
 include "PropLogic.dfy"
 include "scheduler.dfy"
+include "executor.dfy"
 
 module AbstractSatLib {
 
@@ -32,8 +33,10 @@ module AbstractSatLib {
     function method getTrueBool(): BoolExpr
     function method and(f1: BoolExpr, f2: BoolExpr): BoolExpr
     function method not(f1: BoolExpr): BoolExpr
+    function method boolToInt(b: BoolExpr): IntExpr
 
     type IntExpr
+    function method intConst(i: int): IntExpr
     function method add(f1: IntExpr, f2: IntExpr): IntExpr
     function method cmp(f1: IntExpr, f2: IntExpr): BoolExpr
 
@@ -56,21 +59,6 @@ module AbstractSatLib {
       //  sat( and(a, b) ) ==
       //  sat( and(b, a) )
 
-}
-
-// An executor executes an instruction set or language as a state
-// machine. For a given state "s", "exec(s)" returns two possible next
-// states. "branchCondition(s)" returns the condition under which the
-// first of those states should be taken. When "s" is executing a
-// non-branching instruction, it is common for "state(s)" to return (s2,
-// null), and for "branchCondition(s)" to return true.
-module AbstractExecutor {
-  import opened SatLib : AbstractSatLib
-
-  type State
-  function method getInitialState(): State
-  function method branchCondition(s: State): SatLib.BoolExpr
-  function method exec(s: State): (State, State)
 }
 
 import opened Exec : AbstractExecutor
@@ -112,7 +100,8 @@ method symex() returns (tree: array<NodeMaybe>)
   //  ==> !SatLib.sat(SatLib.and(node_i.pc, node_j.pc))
 
 {
-  var scheduler := new TreeQueue(getInitialState());
+  var initState := getInitialState();
+  var scheduler := new TreeQueue(initState);
 
   assert !scheduler.isEmpty();
   while !scheduler.isEmpty()
@@ -173,7 +162,7 @@ method step_execution(scheduler: TreeQueue, state_node: Node)
 {
 
   var bc := Exec.branchCondition(state_node.state);
-  var (s1_state, s2_state) := Exec.exec(state_node.state);
+  var s1_state, s2_state := Exec.exec(state_node.state);
   var s1_pc := SatLib.and(state_node.pc, bc);
   var s2_pc := SatLib.and(state_node.pc, SatLib.not(bc));
 

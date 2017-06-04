@@ -27,6 +27,7 @@ include "PropLogic.dfy"
 include "scheduler.dfy"
 include "executor.dfy"
 
+//TODO: Add "abstract" here once a concrete one is implemented.
 module AbstractSatLib {
 
     type BoolExpr
@@ -37,6 +38,7 @@ module AbstractSatLib {
 
     type IntExpr
     function method intConst(i: int): IntExpr
+    function method intSymbolic(i: int): IntExpr
     function method add(f1: IntExpr, f2: IntExpr): IntExpr
     function method cmp(f1: IntExpr, f2: IntExpr): BoolExpr
 
@@ -61,7 +63,7 @@ module AbstractSatLib {
 
 }
 
-import opened Exec : AbstractExecutor
+import opened Exec : LlvmExecutor
 import opened dpll : DPLL
 
 method Main()

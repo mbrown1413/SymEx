@@ -5,7 +5,7 @@
 // first of those states should be taken. When "s" is executing a
 // non-branching instruction, it is common for "state(s)" to return (s2,
 // null), and for "branchCondition(s)" to return true.
-module AbstractExecutor {
+abstract module AbstractExecutor {
   import opened SatLib : AbstractSatLib
 
   type State
@@ -30,7 +30,9 @@ module LlvmExecutor {
 
   datatype State = State(ip: int, regs: map<Reg, IntExpr>) | HaltedState
 
-  method program() returns (instrs: array<Instr>) {
+  method program() returns (instrs: array<Instr>)
+    ensures fresh(instrs)
+  {
     instrs := new Instr[3];
     instrs[0] := Add(0, 1, 2);
     instrs[1] := Icmp(0, 0, 1);
@@ -38,48 +40,70 @@ module LlvmExecutor {
     return instrs;
   }
 
+  method getReg(s: State, r: Reg) returns (regExpr: IntExpr)
+    requires s.State?
+  {
+    if r in s.regs {
+      return s.regs[r];
+    } else {
+      return intSymbolic(r);
+    }
+  }
+
   method getInitialState() returns (s: State) {
     return State(0, map[]);
   }
 
-  method branchCondition(s: State) returns (cond: SatLib.BoolExpr) {
+  method branchCondition(s: State) returns (cond: SatLib.BoolExpr)
+  {
     var prog := program();
-    return match prog[s.ip]
-      case Add(_, _, _) => getTrueBool()
-      case Icmp(_, _, _) => getTrueBool()
-      case Br(cond, _, _) => cmp(s.regs[cond], intConst(1));
+    if !(s.State? && 0 <= s.ip < prog.Length) {
+      return not(getTrueBool());
+    }
+
+    match prog[s.ip] {
+      case Add(_, _, _) =>
+        return getTrueBool();
+      case Icmp(_, _, _) =>
+        return getTrueBool();
+      case Br(cond, _, _) =>
+        var condReg := getReg(s, cond);
+        return cmp(condReg, intConst(1));
+    }
   }
 
   method exec(s: State) returns (s1: State, s2: State) {
-    if s.HaltedState? {
+    var prog := program();
+    if !(s.State? && 0 <= s.ip < prog.Length) {
       return HaltedState, HaltedState;
-    } else {
+    }
 
-      var prog := program();
+    match prog[s.ip] {
 
-      match prog[s.ip] {
+      case Add(dest, op1, op2) =>
+        var x1 := getReg(s, op1);
+        var x2 := getReg(s, op2);
+        return State(
+          s.ip + 1,
+          s.regs[dest := add(x1, x2)]
+        ), HaltedState;
 
-        case Add(dest, op1, op2) =>
-          return State(
-            s.ip + 1,
-            s.regs[dest := add(s.regs[op1], s.regs[op2])]
-          ), HaltedState;
+      case Icmp(dest, op1, op2) =>
+        var x1 := getReg(s, op1);
+        var x2 := getReg(s, op2);
+        return State(
+          s.ip + 1,
+          s.regs[dest := boolToInt(cmp(x1, x2))]
+        ), HaltedState;
 
-        case Icmp(dest, op1, op2) =>
-          return State(
-            s.ip + 1,
-            s.regs[dest := boolToInt(cmp(s.regs[op1], s.regs[op2]))]
-          ), HaltedState;
-
-        case Br(cond, label1, label2) =>
-          return State(
-            label1,
-            s.regs
-          ), State(
-            label2,
-            s.regs
-          );
-      }
+      case Br(cond, label1, label2) =>
+        return State(
+          label1,
+          s.regs
+        ), State(
+          label2,
+          s.regs
+        );
 
     }
   }

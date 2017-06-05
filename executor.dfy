@@ -12,6 +12,7 @@ abstract module AbstractExecutor {
   method getInitialState() returns (s: State)
   method branchCondition(s: State) returns (cond: SatLib.BoolExpr)
   method exec(s: State) returns (s1: State, s2: State)
+  method halted(s: State) returns (b: bool)
 }
 
 
@@ -106,6 +107,10 @@ module LlvmExecutor {
         );
 
     }
+  }
+
+  method halted(s: State) returns (b: bool) {
+    return s.HaltedState?;
   }
 
 }

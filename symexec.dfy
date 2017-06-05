@@ -162,6 +162,10 @@ method step_execution(scheduler: TreeQueue, state_node: Node)
 
   modifies scheduler
 {
+  var halted := Exec.halted(state_node.state);
+  if halted {
+    return;
+  }
 
   var bc := Exec.branchCondition(state_node.state);
   var s1_state, s2_state := Exec.exec(state_node.state);

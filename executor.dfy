@@ -34,10 +34,11 @@ module LlvmExecutor {
   method program() returns (instrs: array<Instr>)
     ensures fresh(instrs)
   {
-    instrs := new Instr[3];
+    instrs := new Instr[4];
     instrs[0] := Add(0, 1, 2);
     instrs[1] := Icmp(0, 0, 1);
-    instrs[2] := Br(0, 0, 3);
+    instrs[2] := Br(0, 3, 4);
+    instrs[3] := Add(0, 1, 2);
     return instrs;
   }
 

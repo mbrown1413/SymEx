@@ -1,16 +1,19 @@
+
+# Requirements:
+  dafny
+  z3 python interface
+
 #Exporting path to dafny, e.g.:
 # Marie:   export PATH=$PATH:/Users/ada/git/verisec/dafny/Binaries/
 # Alyssa: alias dafny="mono /Users/abyrnes1/Documents/dafny/Dafny.exe"  
 #	  export PATH=$PATH:/Users/abyrnes1/Documents/dafny
-# Michael: put yours here
+# Michael: alias dafny="mono /<dafny install directory>/Dafny.exe"
 
-#Compiling SAT Solver:
-#Compile the dafny programs individually:
-dafny PropLogic.dfy && dafny Io.dfy && dafny Dimacs.dfy
+# Compile:
+dafny symexec.dfy scheduler.dfy executor.dfy sat.dfy satNative.cs
 
-#Compile with C# code (I am not 100% sure this is
-#doing what we think it is):
-dafny Dpll.dfy IoNative.cs DimacsNative.cs
+# First run the python server to answer sat queries:
+python z3server.py
 
-#After this you may compile symexe.dfy
-dafny symexec.dfy scheduler.dfy
+# Then run the symbolic executor:
+./symexec.exe

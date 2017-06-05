@@ -22,62 +22,28 @@
 //beyond a proof, that means calling a solver from dafny, and ensuring the PC
 //conforms to the solver's interface.
 
-include "Dpll.dfy"
-include "PropLogic.dfy"
+//include "Dpll.dfy"
+//include "PropLogic.dfy"
+include "sat.dfy"
 include "scheduler.dfy"
 include "executor.dfy"
 
-//TODO: Add "abstract" here once a concrete one is implemented.
-module AbstractSatLib {
-
-    type BoolExpr
-    function method getTrueBool(): BoolExpr
-    function method and(f1: BoolExpr, f2: BoolExpr): BoolExpr
-    function method not(f1: BoolExpr): BoolExpr
-    function method boolToInt(b: BoolExpr): IntExpr
-
-    type IntExpr
-    function method intConst(i: int): IntExpr
-    function method intSymbolic(i: int): IntExpr
-    function method add(f1: IntExpr, f2: IntExpr): IntExpr
-    function method cmp(f1: IntExpr, f2: IntExpr): BoolExpr
-
-    function method {:verify false} sat(f1: BoolExpr): bool
-
-      // Used for King Property 1
-      //TODO: Possibly derive this from simpler rules
-      ensures sat(getTrueBool())
-      ensures forall a,b :: sat(a) ==>
-        sat(and(a,b)) || sat(and(a,not(b)))
-
-      // Used for King Property 2
-      //ensures forall a :: !sat(and(a, not(a)))
-      //ensures forall a,b,c,d ::
-      //  sat(and( and(a, b), and(c, d) )) ==
-      //  sat(and( and(a, c), and(b, d) ))
-      //ensures forall a,b ::
-      //  !sat(a) ==> !sat( and(a, b) )
-      //ensures forall a,b ::
-      //  sat( and(a, b) ) ==
-      //  sat( and(b, a) )
-
-}
-
 import opened Exec : LlvmExecutor
-import opened dpll : DPLL
 
 method Main()
   decreases *
 {
-  var tree := symex();
+  var scheduler := symex();
+  scheduler.printTree();
 }
 
 // The core of the symbolic execution engine. Explore state in the order
 // according to the scheduler, ensuring that a state is only explored if
 // it can be reached (the path condition leading to it is satisfyable).
-method symex() returns (tree: array<NodeMaybe>)
+method symex() returns (scheduler: TreeQueue)
   decreases *  // Possibly non-terminating
-  ensures tree != null
+  ensures scheduler != null
+  ensures scheduler.a != null
 
   // King Property 1
   // All nodes in the tree should be satisfyable.
@@ -85,7 +51,7 @@ method symex() returns (tree: array<NodeMaybe>)
   // Verification: This property is simple to verify since we explicitly don't
   // enqueue to the scheduler if the path condition is not satisfyable. We
   // simply added this as a loop invariant in the main loop.
-  ensures forall i :: 0 <= i < tree.Length ==> match tree[i]
+  ensures forall i :: 0 <= i < scheduler.a.Length ==> match scheduler.a[i]
     case Some(node) => node != null && SatLib.sat(node.pc)
     case None => true;
 
@@ -103,7 +69,7 @@ method symex() returns (tree: array<NodeMaybe>)
 
 {
   var initState := getInitialState();
-  var scheduler := new TreeQueue(initState);
+  scheduler := new TreeQueue(initState);
 
   assert !scheduler.isEmpty();
   while !scheduler.isEmpty()
@@ -137,7 +103,7 @@ method symex() returns (tree: array<NodeMaybe>)
 
   }
 
-  return scheduler.a;
+  return scheduler;
 }
 
 // Enqueue the children of state_node, but only if their path condition
@@ -189,6 +155,7 @@ method step_execution(scheduler: TreeQueue, state_node: Node)
   }
 }
 
+/*
 module SAT_Func{
 import opened dpll : DPLL
 import opened PropLogic
@@ -206,5 +173,6 @@ sat_bool := temp_sat_bool;
 }
 
 }
+*/
 
 

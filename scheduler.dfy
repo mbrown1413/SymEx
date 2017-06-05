@@ -181,6 +181,29 @@ class {:autocontracts false} TreeQueue
     //forall i :: start <= i <= end ==> a[i].None?
     start == end
   } 
+
+  method printTree() returns ()
+      requires a != null
+    {
+    var i := 0;
+    while i < a.Length
+      decreases a.Length - i
+    {
+      print "tree[", i, "] = ";
+      match a[i] {
+        case Some(node) =>
+          if node == null {
+            print "NULL";
+          } else {
+            print "  ", node.state, "  ", boolExprToStr(node.pc), "\n";
+          }
+        case None =>
+          print "None\n";
+      }
+      i := i + 1;
+    }
+  }
+
 }
 
 function method isLeaf(nodeIndex: int, tree:array<NodeMaybe>): bool

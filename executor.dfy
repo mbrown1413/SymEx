@@ -6,7 +6,7 @@
 // non-branching instruction, it is common for "state(s)" to return (s2,
 // null), and for "branchCondition(s)" to return true.
 abstract module AbstractExecutor {
-  import opened SatLib : AbstractSatLib
+  import opened SatLib : NetworkSatLib
 
   type State
   method getInitialState() returns (s: State)
@@ -20,7 +20,7 @@ abstract module AbstractExecutor {
 // Implements a basic subset of the LLVM intermediate representation.
 //   http://llvm.org/docs/LangRef.html
 module LlvmExecutor {
-  import opened SatLib : AbstractSatLib
+  import opened SatLib : NetworkSatLib
 
   type Reg = int  // Index into map of registers, State.regs
 
@@ -110,7 +110,8 @@ module LlvmExecutor {
   }
 
   method halted(s: State) returns (b: bool) {
-    return s.HaltedState?;
+    var prog := program();
+    return !(s.State? && 0 <= s.ip < prog.Length);
   }
 
 }

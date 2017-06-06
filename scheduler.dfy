@@ -55,7 +55,7 @@ class {:autocontracts false} TreeQueue
     ensures start == -1 && end == 0
     ensures a.Length == 1 && match a[0]
       case Some(node) => node != null &&
-                         node.pc == getTrueBool() &&
+                         node.pc == SatLib.getTrueBool() &&
                          node.state == initState &&
                          fresh(node)
       case None => false;
@@ -65,7 +65,7 @@ class {:autocontracts false} TreeQueue
     a := new NodeMaybe[1];
     start := -1;
     end := 0;
-    var node := new Node(initState, getTrueBool());
+    var node := new Node(initState, SatLib.getTrueBool());
     a[0] := NodeMaybe.Some(node);
   }
 

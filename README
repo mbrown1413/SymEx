@@ -4,13 +4,8 @@
 #	  export PATH=$PATH:/Users/abyrnes1/Documents/dafny
 # Michael: put yours here
 
-#Compiling SAT Solver:
-#Compile the dafny programs individually:
-dafny PropLogic.dfy && dafny Io.dfy && dafny Dimacs.dfy
+# Compiling:
+make
 
-#Compile with C# code (I am not 100% sure this is
-#doing what we think it is):
-dafny Dpll.dfy IoNative.cs DimacsNative.cs
-
-#After this you may compile symexe.dfy
-dafny symexec.dfy scheduler.dfy
+# Running:
+./symexec.exe

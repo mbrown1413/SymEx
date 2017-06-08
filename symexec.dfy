@@ -37,6 +37,25 @@ method Main()
   scheduler.printTree();
 }
 
+// Path conditions in leaf nodes do not overlap.
+// That is, any assignment of variables leads to exactly one leaf node.
+predicate king2(scheduler: TreeQueue)
+  requires scheduler != null
+  requires scheduler.a != null
+  reads scheduler, scheduler.a
+  reads *
+{
+  forall i,j :: 0 <= i < scheduler.a.Length && 0 <= j < scheduler.a.Length ==>
+    var node_i := match scheduler.a[i] case Some(node) => node case None => null;
+    var node_j := match scheduler.a[j] case Some(node) => node case None => null;
+    node_i != null && node_j != null && i != j &&
+    isLeaf(i, scheduler.a) &&
+    isLeaf(j, scheduler.a)
+    ==> (
+      !SatLib.sat(SatLib.and(node_i.pc, node_j.pc))
+    )
+}
+
 // The core of the symbolic execution engine. Explore state in the order
 // according to the scheduler, ensuring that a state is only explored if
 // it can be reached (the path condition leading to it is satisfyable).
@@ -56,16 +75,8 @@ method symex() returns (scheduler: TreeQueue)
     case None => true;
 
   // King Property 2
-  // Path conditions in leaf nodes do not overlap.
-  // That is, any assignment of variables leads to exactly one leaf node.
-  //ensures tree.Length >= 1
-  //ensures forall i,j :: 0 <= i < tree.Length && 0 <= j < tree.Length ==>
-  //  var node_i := match tree[i] case Some(node) => node case None => null;
-  //  var node_j := match tree[j] case Some(node) => node case None => null;
-  //  node_i != null //&& node_j != null && i != j &&
-  //  isLeaf(i, tree) &&
-  //  isLeaf(j, tree)
-  //  ==> !SatLib.sat(SatLib.and(node_i.pc, node_j.pc))
+  ensures scheduler.a.Length >= 1
+  ensures king2(scheduler)
 
 {
   var initState := getInitialState();
@@ -84,16 +95,8 @@ method symex() returns (scheduler: TreeQueue)
       case None => true;
 
     // Used to verify King Prop 2
-    //invariant scheduler.end < scheduler.a.Length
-    //invariant forall i,j :: 0 <= i <= scheduler.end && 0 <= j <= scheduler.end ==>
-    //var node_i := match scheduler.a[i] case Some(node) => node case None => null;
-    //var node_j := match scheduler.a[j] case Some(node) => node case None => null;
-    //node_i != null && node_j != null && i != j &&
-    //  isLeaf(i, scheduler.a) &&
-    //  isLeaf(j, scheduler.a)
-    //  ==> !isAncestor(i, j)
-    //  //!isAncestor(i, j)
-    //  //==> !sat( and(node_i.pc, node_j.pc) )
+    invariant king2(scheduler)
+    //invariant 2*scheduler.start+2 >= scheduler.end
 
   {
     var state_node := scheduler.Dequeue();
@@ -114,17 +117,26 @@ method step_execution(scheduler: TreeQueue, state_node: Node)
   requires state_node != null
   requires SatLib.sat(state_node.pc)
   requires scheduler.Valid() && scheduler.start >= 0
+  requires scheduler.a[scheduler.start].Some?
+  requires scheduler.a[scheduler.start].v == state_node
+  requires scheduler.start >= 0
 
-  ensures scheduler.a != null
   ensures scheduler.Valid()
 
-  // King 1
+  // Used for King 1
   requires forall i :: 0 <= i < scheduler.a.Length ==> match scheduler.a[i]
     case Some(node) => node != null && SatLib.sat(node.pc)
     case None => true;
   ensures forall i :: 0 <= i < scheduler.a.Length ==> match scheduler.a[i]
     case Some(node) => node != null && SatLib.sat(node.pc)
     case None => true;
+
+  // Used for King 2
+  requires king2(scheduler)
+  ensures king2(scheduler)
+  requires isLeaf(scheduler.start, scheduler.a)
+  //requires 2*scheduler.start+2 >= scheduler.end
+  //ensures 2*scheduler.start+2 >= scheduler.end
 
   modifies scheduler
 {
@@ -137,6 +149,96 @@ method step_execution(scheduler: TreeQueue, state_node: Node)
   var s1_state, s2_state := Exec.exec(state_node.state);
   var s1_pc := SatLib.and(state_node.pc, bc);
   var s2_pc := SatLib.and(state_node.pc, SatLib.not(bc));
+
+  assert !SatLib.sat(SatLib.and(s1_pc, s2_pc));
+
+  // state_node satisfies King 2
+  assert forall i :: 0 <= i < scheduler.a.Length ==>
+    var node_i := match scheduler.a[i] case Some(node) => node case None => null;
+    var node_j := match scheduler.a[scheduler.start] case Some(node) => node case None => null;
+    node_i != null && node_j != null && i != scheduler.start &&
+    isLeaf(i, scheduler.a) &&
+    isLeaf(scheduler.start, scheduler.a)
+    ==> (
+      !SatLib.sat(SatLib.and(node_i.pc, node_j.pc))
+    );
+
+  // King 2 between start and other leaves
+  //assert forall i :: 0 <= i < scheduler.a.Length ==>
+  //  var node_i := match scheduler.a[i] case Some(node) => node case None => null;
+  //  var node_j := match scheduler.a[scheduler.start] case Some(node) => node case None => null;
+  //  node_i != null && node_j != null && i != scheduler.start &&
+  //  isLeaf(i, scheduler.a) &&
+  //  isLeaf(scheduler.start, scheduler.a)
+  //  ==> (
+  //    !SatLib.sat(SatLib.and(SatLib.and(node_i.pc, node_j.pc), bc))
+  //    //!SatLib.sat(SatLib.and(SatLib.and(node_i.pc, node_j.pc), SatLib.not(bc)))
+  //  );
+  //// One "and" association away from the above
+  //assume forall a,b,c :: (!SatLib.sat( SatLib.and(SatLib.and(a,b),c) )) ==>
+  //                       (!SatLib.sat( SatLib.and(a,SatLib.and(b,c)) ));
+  //assert forall i :: 0 <= i < scheduler.a.Length ==>
+  //  var node_i := match scheduler.a[i] case Some(node) => node case None => null;
+  //  var node_j := match scheduler.a[scheduler.start] case Some(node) => node case None => null;
+  //  node_i != null && node_j != null && i != scheduler.start &&
+  //  isLeaf(i, scheduler.a) &&
+  //  isLeaf(scheduler.start, scheduler.a)
+  //  ==> (
+  //    !SatLib.sat(SatLib.and(node_i.pc, SatLib.and(node_j.pc, bc)))
+  //    //!SatLib.sat(SatLib.and(node_i.pc, SatLib.and(node_j.pc, SatLib.not(bc))))
+  //  );
+
+  // Second try at the above
+  assume forall a,b,c :: (!SatLib.sat( SatLib.and(SatLib.and(a,b),c) )) <==>
+                         (!SatLib.sat( SatLib.and(a,SatLib.and(b,c)) ));
+  assert forall i :: 0 <= i < scheduler.a.Length ==>
+    var node_i := match scheduler.a[i] case Some(node) => node case None => null;
+    var node_j := match scheduler.a[scheduler.start] case Some(node) => node case None => null;
+    node_i != null && node_j != null && i != scheduler.start &&
+    isLeaf(i, scheduler.a) &&
+    isLeaf(scheduler.start, scheduler.a)
+    ==> (
+      (!SatLib.sat(SatLib.and(SatLib.and(node_i.pc, node_j.pc), bc))) &&
+      (!SatLib.sat(SatLib.and(node_i.pc, SatLib.and(node_j.pc, bc)))) &&
+      (!SatLib.sat(SatLib.and(SatLib.and(node_i.pc, node_j.pc), SatLib.not(bc)))) &&
+      (!SatLib.sat(SatLib.and(node_i.pc, SatLib.and(node_j.pc, SatLib.not(bc)))))
+    );
+  // One "and" association away from the above
+  //assert forall i :: 0 <= i < scheduler.a.Length ==>
+  //  var node_i := match scheduler.a[i] case Some(node) => node case None => null;
+  //  var node_j := match scheduler.a[scheduler.start] case Some(node) => node case None => null;
+  //  node_i != null && node_j != null && i != scheduler.start &&
+  //  isLeaf(i, scheduler.a) &&
+  //  isLeaf(scheduler.start, scheduler.a)
+  //  ==> (
+  //    !SatLib.sat(SatLib.and(node_i.pc, SatLib.and(node_j.pc, bc)))
+  //    //!SatLib.sat(SatLib.and(node_i.pc, SatLib.and(node_j.pc, SatLib.not(bc))))
+  //  );
+
+
+  // King 2 with s1 and s2 added. The parent, a[start] excluded.
+  //assert forall i,j :: 0 <= i < scheduler.a.Length && 1 <= j <= 2 ==>
+  //  var node_i := match scheduler.a[i] case Some(node) => node case None => null;
+  //  var pc := if j == 0 then s1_pc else s2_pc;
+  //  node_i != null && i != scheduler.start &&
+  //  isLeaf(i, scheduler.a)
+  //  ==> (
+  //    !SatLib.sat(SatLib.and(node_i.pc, pc))
+  //  );
+  //assert forall i :: 0 <= i < scheduler.a.Length ==>
+  //  var node_i := match scheduler.a[i] case Some(node) => node case None => null;
+  //  node_i != null && i != scheduler.start &&
+  //  isLeaf(i, scheduler.a)
+  //  ==> (
+  //    !SatLib.sat(SatLib.and(node_i.pc, s1_pc))
+  //  );
+  //assert forall i :: 0 <= i < scheduler.a.Length ==>
+  //  var node_i := match scheduler.a[i] case Some(node) => node case None => null;
+  //  node_i != null && i != scheduler.start &&
+  //  isLeaf(i, scheduler.a)
+  //  ==> (
+  //    !SatLib.sat(SatLib.and(node_i.pc, s2_pc))
+  //  );
 
   var node1: Node := null;
   var node2: Node := null;

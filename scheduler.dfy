@@ -105,26 +105,18 @@ class {:autocontracts false} TreeQueue
     requires king2(this)
     ensures king2(this)
     ensures end >= old(end)
+    requires isLeaf(start, a);
     // input nodes must not be sat with any leaves, except start
-    //requires forall i :: 0 <= i < a.Length ==>
-    //  var node_i := match a[i] case Some(node) => node case None => null;
-    //  node_i != null && lc != null && isLeaf(i, a) && i != start
-    //  ==> (
-    //    !SatLib.sat(SatLib.and(node_i.pc, lc.pc)) &&
-    //    !SatLib.sat(SatLib.and(lc.pc, node_i.pc))
-    //  )
-    //requires forall i :: 0 <= i < a.Length ==>
-    //  var node_i := match a[i] case Some(node) => node case None => null;
-    //  node_i != null && rc != null && isLeaf(i, a) && i != start
-    //  ==> (
-    //    !SatLib.sat(SatLib.and(node_i.pc, rc.pc)) &&
-    //    !SatLib.sat(SatLib.and(rc.pc, node_i.pc))
-    //  )
-    //requires lc == null || rc == null || (
-    //  !SatLib.sat(SatLib.and(lc.pc, rc.pc)) && 
-    //  !SatLib.sat(SatLib.and(rc.pc, lc.pc))
-    //);
-    //requires start >= 0;
+    requires forall i :: 0 <= i < a.Length ==>
+      var node_i := match a[i] case Some(node) => node case None => null;
+      node_i != null && i != start &&
+      isLeaf(i, a)
+      ==> (
+        (lc != null ==> !SatLib.sat(SatLib.and(node_i.pc, lc.pc))) &&
+        (rc != null ==> !SatLib.sat(SatLib.and(node_i.pc, rc.pc)))
+      );
+    // King 2 between lc and rc
+    requires (lc != null && rc != null) ==> !SatLib.sat(SatLib.and(lc.pc, rc.pc));
 
     ensures fresh(a)
   {
@@ -144,6 +136,19 @@ class {:autocontracts false} TreeQueue
     a[l_index] := lc_node;
     a[r_index] := rc_node;
     end := r_index;
+
+    assert (lc_node.Some? || rc_node.Some?) ==> !isLeaf(start, a);
+    assert a[l_index].Some? ==> isLeaf(l_index, a);
+    assert a[r_index].Some? ==> isLeaf(r_index, a);
+
+    // King 2 between lc, rc and other leaves
+    assert forall i :: 0 <= i < a.Length ==>
+      var node_i := match a[i] case Some(node) => node case None => null;
+      node_i != null && isLeaf(i, a)
+      ==> (
+        ((lc != null && i != l_index) ==> !SatLib.sat(SatLib.and(node_i.pc, lc.pc))) &&
+        ((rc != null && i != r_index) ==> !SatLib.sat(SatLib.and(node_i.pc, rc.pc)))
+      );
 
     assert king2(this);
 

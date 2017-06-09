@@ -60,16 +60,18 @@ extern "NetworkSatLib" module NetworkSatLib {
       ensures sat(getTrueBool())
       ensures forall a,b :: sat(a) ==>
         sat(and(a,b)) || sat(and(a,not(b)))
-
-      // Used for King Property 2
-      ensures forall a :: !sat(and(a, not(a)))
       ensures forall a,b,c,d ::
         sat(and( and(a, b), and(c, d) )) ==
         sat(and( and(a, c), and(b, d) ))
+
+      // Used for King Property 2
+      ensures forall a :: !sat(and(a, not(a)))
       ensures forall a,b ::
         !sat(a) ==> !sat( and(a, b) )
       ensures forall a,b ::
         sat( and(a, b) ) ==
         sat( and(b, a) )
+      ensures forall a,b,c :: ( !sat( and(and(a,b),c) ) )
+                         <==> ( !sat( and(a,and(b,c)) ) );
 
 }

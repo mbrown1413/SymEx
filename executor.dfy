@@ -5,16 +5,6 @@
 // first of those states should be taken. When "s" is executing a
 // non-branching instruction, it is common for "state(s)" to return (s2,
 // null), and for "branchCondition(s)" to return true.
-abstract module AbstractExecutor {
-  import opened SatLib : NetworkSatLib
-
-  type State
-  method getInitialState() returns (s: State)
-  method branchCondition(s: State) returns (cond: SatLib.BoolExpr)
-  method exec(s: State) returns (s1: State, s2: State)
-  method halted(s: State) returns (b: bool)
-}
-
 
 
 // Implements a basic subset of the LLVM intermediate representation.

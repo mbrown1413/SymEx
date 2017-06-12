@@ -55,22 +55,49 @@ extern "NetworkSatLib" module NetworkSatLib {
 
     extern function method {:verify false} sat(f1: BoolExpr): bool
 
-      // Used for King Property 1
-      //TODO: Possibly derive this from simpler rules
+      // Used to ensure the initial node in the scheduler is satisfyable.
       ensures sat(getTrueBool())
+
+
+      ////////////////////////////////////
+      ///// Used for King Property 1 /////
+      ////////////////////////////////////
+
+      // TODO: Possibly derive this from simpler axioms.
+
+      // Negation Axiom of "or"
+      // Used in "step_execution()" to prove that if s1_pc is not satisfyable,
+      //   then s2_pc is satisfyable.
       ensures forall a,b :: sat(a) ==>
         sat(and(a,b)) || sat(and(a,not(b)))
-      ensures forall a,b,c,d ::
-        sat(and( and(a, b), and(c, d) )) ==
-        sat(and( and(a, c), and(b, d) ))
 
-      // Used for King Property 2
+
+      ////////////////////////////////////
+      ///// Used for King Property 2 /////
+      ////////////////////////////////////
+
+      // Negation Axiom of "and"
+      // Used in "step_execution()" to prove two child pc's do not overlap.
       ensures forall a :: !sat(and(a, not(a)))
+
+      // Zero Axiom of "and"
+      // Used in "step_execution()" to prove !sat( and(pc1, pc2) ).
+      // Used in "step_execution()" to prove new path conditions are not
+      //   satisfyable with existing leaves.
       ensures forall a,b ::
         !sat(a) ==> !sat( and(a, b) )
+
+      // Communativity of "and"
+      // Used in "Scheduler.Enqueue()" to prove king2 postcondition.
+      // Used in "step_execution()" to prove !sat( and(pc1, pc2) ).
       ensures forall a,b ::
         sat( and(a, b) ) ==
         sat( and(b, a) )
+
+      // Associativity of "and"
+      // Used in "step_execution()" to prove !sat( and(pc1, pc2) ).
+      // Used in "step_execution()" to prove new path conditions are not
+      //   satisfyable with existing leaves.
       ensures forall a,b,c :: ( !sat( and(and(a,b),c) ) )
                          <==> ( !sat( and(a,and(b,c)) ) );
 

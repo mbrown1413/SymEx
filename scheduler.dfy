@@ -40,11 +40,16 @@ class {:autocontracts false} TreeQueue
   var start: int, end: int;
 
   predicate Valid()
-    reads this
+    reads *
   {
     a != null &&
     -1 <= start <= end < a.Length &&
     end >= 0 &&
+
+    // Used for King 2
+    (forall i :: 0 <= end < i < a.Length ==> a[i].None?) &&
+    2*start + 2 >= end &&
+
     a.Length >= 1
   }
 
@@ -75,6 +80,8 @@ class {:autocontracts false} TreeQueue
     modifies this
 
     requires start >= 0
+    requires a[start].Some?
+
     ensures 0 <= 2*start + 1 < a.Length
     ensures 0 <= 2*start + 2 < a.Length
     ensures match a[2*start + 1]
@@ -94,43 +101,114 @@ class {:autocontracts false} TreeQueue
       case Some(node) => node != null && SatLib.sat(node.pc)
       case None => true;
 
+    // Used for King Property 2
+    requires king2(this)
+    ensures king2(this)
+    ensures end >= old(end)
+    requires isLeaf(start, a);
+    // input nodes must not be sat with any leaves, except start
+    requires forall i :: 0 <= i < a.Length ==>
+      var node_i := match a[i] case Some(node) => node case None => null;
+      node_i != null && i != start &&
+      isLeaf(i, a)
+      ==> (
+        (lc != null ==> !SatLib.sat(SatLib.and(node_i.pc, lc.pc))) &&
+        (rc != null ==> !SatLib.sat(SatLib.and(node_i.pc, rc.pc)))
+      );
+    // King 2 between lc and rc
+    requires (lc != null && rc != null) ==> !SatLib.sat(SatLib.and(lc.pc, rc.pc));
+
     ensures fresh(a)
   {
     var l_index := 2*start + 1;  // right/left children indices
     var r_index := 2*start + 2;
 
-    // Expand array if needed
-    var new_len := a.Length;
-    if a.Length <= r_index {
-      new_len := 2*(a.Length+1)-1;  // Next (2^i)-1
-    }
-    assert new_len > r_index;
+    //assert r_index > end;
+    //assert forall i :: r_index < i < a.Length ==> a[i].None?;
 
-    // Create fresh copy of "a"
-    var b := new NodeMaybe[new_len];
-    forall i | 0 <= i < b.Length
-    { // Set to None
-      b[i] := NodeMaybe.None;
-    }
-    forall i | 0 <= i < a.Length < b.Length
-    { // Copy a to b
-      b[i] := a[i];
-    }
-    assert forall k :: 0 <= k < a.Length < b.Length ==> a[k] == b[k];
-    a := b;
+    a := expandTree(a, r_index);
+
+    assert Valid();
+    assert king2(this);
 
     lc_node := if lc != null then NodeMaybe.Some(lc) else NodeMaybe.None;
     rc_node := if rc != null then NodeMaybe.Some(rc) else NodeMaybe.None;
     a[l_index] := lc_node;
     a[r_index] := rc_node;
-
-    // Nodes between old end and l_index must be set to null.
-    forall i | end < i < l_index
-    {
-      a[i] := NodeMaybe.None;
-    }
-
     end := r_index;
+
+    assert (lc_node.Some? || rc_node.Some?) ==> !isLeaf(start, a);
+    assert a[l_index].Some? ==> isLeaf(l_index, a);
+    assert a[r_index].Some? ==> isLeaf(r_index, a);
+
+    // King 2 between lc, rc and other leaves
+    assert forall i :: 0 <= i < a.Length ==>
+      var node_i := match a[i] case Some(node) => node case None => null;
+      node_i != null && isLeaf(i, a)
+      ==> (
+        ((lc != null && i != l_index) ==> !SatLib.sat(SatLib.and(node_i.pc, lc.pc))) &&
+        ((rc != null && i != r_index) ==> !SatLib.sat(SatLib.and(node_i.pc, rc.pc)))
+      );
+
+    assert king2(this);
+
+    // lc and rc become leaves, and start is no longer a leaf
+    //assert forall i :: r_index < i < a.Length ==> a[i].None?;
+    //assert (a[l_index].None? && a[r_index].None?) || !isLeaf(start, a);
+    //assert a[l_index].Some? ==> isLeaf(l_index, a);
+    //assert a[r_index].Some? ==> isLeaf(r_index, a);
+
+    //assert match a[l_index]
+    //  case None => true
+    //  case Some(node) => lc == null || node.pc == lc.pc;
+    //assert match a[r_index]
+    //  case None => true
+    //  case Some(node) => rc == null || node.pc == rc.pc;
+
+    // King 2 for all the nodes not modified
+    //assert forall i,j :: 0 <= i < a.Length && 0 <= j < a.Length ==>
+    //  var node_i := match a[i] case Some(node) => node case None => null;
+    //  var node_j := match a[j] case Some(node) => node case None => null;
+    //  node_i != null && node_j != null && i != j &&
+    //  isLeaf(i, a) &&
+    //  isLeaf(j, a) &&
+    //  i != l_index && i != r_index && j != l_index && j != r_index
+    //  ==> !SatLib.sat(SatLib.and(node_i.pc, node_j.pc));
+
+    //assert 
+    //  var node_l := match a[l_index] case Some(node) => node case None => null;
+    //  var node_r := match a[r_index] case Some(node) => node case None => null;
+    //  node_l != null && node_r != null
+    //  ==> !SatLib.sat(SatLib.and(node_l.pc, node_r.pc)) &&
+    //      !SatLib.sat(SatLib.and(node_r.pc, node_l.pc));
+
+    //assert forall i,j :: 0 <= i < a.Length && 0 <= j < a.Length ==>
+    //  var node_i := match a[i] case Some(node) => node case None => null;
+    //  var node_j := match a[j] case Some(node) => node case None => null;
+    //  node_i != null && node_j != null && i != j &&
+    //  isLeaf(i, a) &&
+    //  isLeaf(j, a) &&
+    //  ((i == l_index && j == r_index) || (i == r_index && j == l_index)) &&
+    //  (i != l_index || i != r_index || j != l_index || j != r_index)
+    //  ==> !SatLib.sat(SatLib.and(node_i.pc, node_j.pc));
+
+    //assert forall i,j :: 0 <= i < a.Length && 0 <= j < a.Length ==>
+    //  var node_i := match a[i] case Some(node) => node case None => null;
+    //  var node_j := match a[j] case Some(node) => node case None => null;
+    //  node_i != null && node_j != null && i != j &&
+    //  isLeaf(i, a) &&
+    //  isLeaf(j, a) &&
+    //  !((i == l_index && j == r_index) || (i == r_index && j == l_index)) &&
+    //  (i != l_index || i != r_index || j != l_index || j != r_index)
+    //  ==> !SatLib.sat(SatLib.and(node_i.pc, node_j.pc));
+
+    //assert forall i,j :: 0 <= i < a.Length && 0 <= j < a.Length ==>
+    //  var node_i := match a[i] case Some(node) => node case None => null;
+    //  var node_j := match a[j] case Some(node) => node case None => null;
+    //  node_i != null && node_j != null && i != j &&
+    //  isLeaf(i, a) &&
+    //  isLeaf(j, a)
+    //  ==> !SatLib.sat(SatLib.and(node_i.pc, node_j.pc));
 
     return lc_node, rc_node;
   }
@@ -141,6 +219,11 @@ class {:autocontracts false} TreeQueue
 
     ensures -1 <= old(start) < start < a.Length
     ensures a[start] == a[old(start)+1];
+    ensures d != null ==> a[start].Some?
+    ensures d != null ==> d == a[start].v
+
+    // Deque'd elements must be leaves
+    ensures start >= a.Length || a[start].None? ||isLeaf(start, a)
 
     // Used for King Property 1
     requires -1 <= start < a.Length-1
@@ -155,6 +238,12 @@ class {:autocontracts false} TreeQueue
     ensures forall i :: 0 <= i < a.Length ==> match a[i]
       case Some(node) => node != null && SatLib.sat(node.pc)
       case None => true;
+
+    // Used for King Property 2
+    requires king2(this)
+    ensures king2(this)
+    ensures end == old(end)
+    //requires 2*start+2 >= end
 
     requires !isEmpty()
 
@@ -181,21 +270,118 @@ class {:autocontracts false} TreeQueue
     //forall i :: start <= i <= end ==> a[i].None?
     start == end
   } 
+
+  method printTree() returns ()
+      requires a != null
+    {
+    var i := 0;
+    while i < a.Length
+      decreases a.Length - i
+    {
+      print "tree[", i, "] = ";
+      match a[i] {
+        case Some(node) =>
+          if node == null {
+            print "NULL";
+          } else {
+            print "  ", node.state, "  ", SatLib.boolExprToStr(node.pc), "\n";
+          }
+        case None =>
+          print "None\n";
+      }
+      i := i + 1;
+    }
+  }
+
+}
+
+// Expand tree "a" with "defaultValue" so "a[index]" is within the array bounds.
+method expandTree(a: array<NodeMaybe>, index: int) returns (b: array<NodeMaybe>)
+  requires a != null
+  requires 0 <= index < 2*(a.Length+1)-1
+
+  ensures b != null
+  ensures a.Length <= b.Length
+  ensures index < b.Length
+  ensures forall i :: 0 <= i < a.Length ==> a[i] == b[i]
+  ensures forall i :: a.Length <= i < b.Length ==> b[i].None?
+  ensures fresh(b)
+
+  // Used for King 2
+  // Leaveness is the same. Expansed None nodes are not leaves
+  //ensures forall i :: 0 <= i < a.Length ==> (isLeaf(i, a) == isLeaf(i, b));
+  //ensures forall i :: a.Length <= i < b.Length ==> !isLeaf(i, b);
+
+{
+
+  // Expand array if needed
+  var new_len := a.Length;
+  if a.Length <= index {
+    new_len := 2*(a.Length+1)-1;  // Next (2^i)-1
+  }
+  assert new_len > index;
+
+  // Create fresh copy of "a"
+  b := new NodeMaybe[new_len];
+  forall i | 0 <= i < b.Length
+  { // Set to None
+    b[i] := NodeMaybe.None;
+  }
+  forall i | 0 <= i < a.Length
+  { // Copy a to b
+    b[i] := a[i];
+  }
+
+  //assert a.Length <= b.Length;
+  //assert forall k :: 0 <= k < a.Length ==> a[k] == b[k];
+  //assert forall k :: a.Length <= k < b.Length ==> b[k].None?;
+
+  //assert forall k :: 0 <= k < 2*k+2 < a.Length ==> (isLeaf(k, a) ==> isLeaf(k, b));
+  //assert forall k :: a.Length <= k < 2*k+2 < b.Length ==> end < 2*k+2;
+  //assert forall k :: a.Length <= k < 2*k+2 < b.Length ==> (isLeaf(k, a) ==> isLeaf(k, b));
+  //assert forall k :: 0 <= k < a.Length <= 2*k+2 < b.Length ==> (isLeaf(k, a) ==> isLeaf(k, b));
+  //assert forall k :: 0 <= k < a.Length ==> (isLeaf(k, a) ==> isLeaf(k, b));
+  //assert forall k :: 0 <= k < a.Length ==> (!isLeaf(k, a) ==> !isLeaf(k, b));
+  //assert forall i :: 0 <= end < i < a.Length ==> a[i].None?;
+  //assert forall k :: 0 <= k < a.Length ==> (isLeaf(k, a) == isLeaf(k, b));
+
+  //assert forall k :: a.Length <= k < b.Length ==> !isLeaf(k, b);
+
+  return b;
 }
 
 function method isLeaf(nodeIndex: int, tree:array<NodeMaybe>): bool
+  requires tree != null
+  requires 0 <= nodeIndex < tree.Length
+  reads tree
 {
-  true//tree[2*nodeIndex+1].Some? && tree[2*nodeIndex+2].Some?
+  var l_child := 2*nodeIndex+1;
+  var r_child := 2*nodeIndex+2;
+  if tree[nodeIndex].None? then
+    false
+  else if r_child < tree.Length then
+    assert l_child < tree.Length;
+    tree[l_child].None? && tree[r_child].None?
+  else
+    true
 }
 
-//// Is node at idx1 ancestor of node at idx2?
-//function isAncestor(idx1: int, idx2: int): bool
-//{
-//  exists i :: 0 <= i ==> idx2 / pow2(i) == idx1
-//}
-//
-//function pow2(n: int): int
-//  requires n >= 0
-//{
-//  if (n == 0) then 1 else 2 * pow2(n-1)
-//}
+// Is node at idx1 ancestor of node at idx2?
+function isAncestor(idx1: int, idx2: int): bool
+  requires idx1 >= 0 && idx2 >= 0
+{
+  if idx1 == 0 then
+    true
+  else if idx2 == 0 then
+    false
+  else
+    exists i :: 0 <= i ==> idx2 / pow2(i) == idx1
+}
+
+function pow2(n: int): int
+  decreases n
+  requires n >= 0
+  ensures pow2(n) > 0
+{
+  if (n == 0) then 1 else 2 * pow2(n-1)
+}

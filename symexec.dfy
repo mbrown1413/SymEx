@@ -126,6 +126,8 @@ method step_execution(scheduler: Scheduler, state_node: Node)
   var s2_pc := SatLib.and(state_node.pc, SatLib.not(bc));
 
   // state_node satisfies King 2
+  // This is exactly like King 2, except node_j is always the last dequeue'd
+  // node.
   assert forall i :: 0 <= i < scheduler.a.Length ==>
     var node_i := match scheduler.a[i] case Some(node) => node case None => null;
     var node_j := match scheduler.a[scheduler.start] case Some(node) => node case None => null;
@@ -152,7 +154,11 @@ method step_execution(scheduler: Scheduler, state_node: Node)
   var node1: Node := null;
   var node2: Node := null;
   if !SatLib.sat(s1_pc) {
+
+    // Used for King 2
     // Uses: Negation Axiom of "or"
+    assert SatLib.sat(s2_pc);
+
     node2 := new Node(s2_state, s2_pc);
     scheduler.Enqueue(null, node2);
   } else if !SatLib.sat(s2_pc) {

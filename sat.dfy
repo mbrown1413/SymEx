@@ -55,6 +55,9 @@ extern "NetworkSatLib" module NetworkSatLib {
 
     extern function method {:verify false} sat(f1: BoolExpr): bool
 
+      // Following are all of the assumptions about the SAT solver we use for
+      // our proofs.
+
       // Used to ensure the initial node in the scheduler is satisfyable.
       ensures sat(getTrueBool())
 

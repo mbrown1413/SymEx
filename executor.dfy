@@ -24,6 +24,7 @@ module LlvmExecutor {
 
   type Reg = int  // Index into map of registers, State.regs
 
+  // Fields cannot be duplicated, so fields are appended with the instruction.
   datatype Instr =
     Add(add_dest: Reg, add_op1: Reg, add_op2: Reg)
   | Icmp(icmp_dest: Reg, icmp_op1: Reg, icmp_op2: Reg)
@@ -59,6 +60,9 @@ module LlvmExecutor {
   method branchCondition(s: State) returns (cond: SatLib.BoolExpr)
   {
     var prog := program();
+
+    // If we're halted, or we run out of instructions, it
+    // doesn't matter, the children will be halted.
     if !(s.State? && 0 <= s.ip < prog.Length) {
       return not(getTrueBool());
     }
@@ -76,10 +80,14 @@ module LlvmExecutor {
 
   method exec(s: State) returns (s1: State, s2: State) {
     var prog := program();
+
+    // If we're halted, both children are also halted
     if !(s.State? && 0 <= s.ip < prog.Length) {
       return HaltedState, HaltedState;
     }
 
+    // Return two children states.
+    // If not branching, return (state, HaltedState).
     match prog[s.ip] {
 
       case Add(dest, op1, op2) =>

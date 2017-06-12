@@ -9,7 +9,12 @@ the ability to statically prove properties about programs.
 
 The 64-bit mono build is required, because we need to interface with Z3.
 
-TODO
+On Linux you may be able to install the `mono` package from your package
+manager.
+
+Otherwise you can compile from source:
+  * [Linux Instructions](http://www.mono-project.com/docs/compiling-mono/linux/)
+  * [Mac Instructions](http://www.mono-project.com/docs/compiling-mono/mac/)
 
 We've tested with:
 

@@ -358,11 +358,14 @@ function method isLeaf(nodeIndex: int, tree:array<NodeMaybe>): bool
   var l_child := 2*nodeIndex+1;
   var r_child := 2*nodeIndex+2;
   if tree[nodeIndex].None? then
-    false
+    false  // Calling isLeaf on non-existent node.
   else if r_child < tree.Length then
+    // Both children must be None to be a leaf.
     assert l_child < tree.Length;
     tree[l_child].None? && tree[r_child].None?
   else
+    // Children are off the end of the array, they are assumed
+    // None.
     true
 }
 

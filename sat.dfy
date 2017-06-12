@@ -57,6 +57,10 @@ extern "NetworkSatLib" module NetworkSatLib {
 
       // Used for King Property 1
       //TODO: Possibly derive this from simpler rules
+      // Following are all of the assumptions about the SAT solver we use for
+      // our proofs.
+
+      // Used to ensure the initial node in the scheduler is satisfyable.
       ensures sat(getTrueBool())
       ensures forall a,b :: sat(a) ==>
         sat(and(a,b)) || sat(and(a,not(b)))

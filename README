@@ -9,11 +9,16 @@
 #	  export PATH=$PATH:/Users/abyrnes1/Documents/dafny
 # Michael: alias dafny="mono /<dafny install directory>/Dafny.exe"
 
-# Compile:
-dafny symexec.dfy scheduler.dfy executor.dfy sat.dfy satNative.cs
+# Compile dafny into C#:
+# Status: Has errors because Z3 not properly referenced.
+dafny /compile:2 symexec.dfy scheduler.dfy executor.dfy sat.dfy satNative.cs
 
-# First run the python server to answer sat queries:
-python z3server.py
+# Compile C# into executable:
+# Status: Has 29 warnings
+mcs -r:Microsoft.Z3.dll -r:System.Numerics.dll symexec.cs satNative.cs
 
 # Then run the symbolic executor:
+# Status: "System.NullReferenceException" 
+mono symexec.exe
+#or
 ./symexec.exe

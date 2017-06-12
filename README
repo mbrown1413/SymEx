@@ -9,6 +9,10 @@
 #	  export PATH=$PATH:/Users/abyrnes1/Documents/dafny
 # Michael: alias dafny="mono /<dafny install directory>/Dafny.exe"
 
+# Versions and things:
+# dafny (mac) version used: 1.9.9.40414
+# mono (mac) version used: 5.3.0 (master/7d1644d234b Fri Jun  2 21:05:57 EDT 2017) amd64
+
 # Compile dafny into C#:
 # Status: Has errors because Z3 not properly referenced.
 dafny /compile:2 symexec.dfy scheduler.dfy executor.dfy sat.dfy satNative.cs
@@ -18,7 +22,6 @@ dafny /compile:2 symexec.dfy scheduler.dfy executor.dfy sat.dfy satNative.cs
 mcs -r:Microsoft.Z3.dll -r:System.Numerics.dll symexec.cs satNative.cs
 
 # Then run the symbolic executor:
-# Status: "System.NullReferenceException" 
 mono symexec.exe
 #or
 ./symexec.exe

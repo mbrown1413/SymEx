@@ -26,7 +26,7 @@ namespace @NetworkSatLib {
   }
 
   public partial class __default {
-    static Microsoft.Z3.Context ctx;
+    static Microsoft.Z3.Context ctx = new Microsoft.Z3.Context();
 
     public static void getTrueBool(out BoolExpr e) {
       e = new BoolExpr(ctx.MkTrue()); 

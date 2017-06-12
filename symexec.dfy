@@ -153,18 +153,7 @@ method step_execution(scheduler: Scheduler, state_node: Node)
 
   var node1: Node := null;
   var node2: Node := null;
-  if !SatLib.sat(s1_pc) {
-
-    // Used for King 2
-    // Uses: Negation Axiom of "or"
-    assert SatLib.sat(s2_pc);
-
-    node2 := new Node(s2_state, s2_pc);
-    scheduler.Enqueue(null, node2);
-  } else if !SatLib.sat(s2_pc) {
-    node1 := new Node(s1_state, s1_pc);
-    scheduler.Enqueue(node1, null);
-  } else {
+  if SatLib.sat(s1_pc) && SatLib.sat(s2_pc) {
     node1 := new Node(s1_state, s1_pc);
     node2 := new Node(s2_state, s2_pc);
 
@@ -175,6 +164,11 @@ method step_execution(scheduler: Scheduler, state_node: Node)
     // Uses: Zero Axiom of "and"
     assert !SatLib.sat(SatLib.and(node1.pc, node2.pc));
 
-    scheduler.Enqueue(node1, node2);
+  } else if SatLib.sat(s1_pc) {
+    node1 := new Node(s1_state, s1_pc);
+  } else if SatLib.sat(s2_pc) {
+    node2 := new Node(s2_state, s2_pc);
   }
+
+  scheduler.Enqueue(node1, node2);
 }

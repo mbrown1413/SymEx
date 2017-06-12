@@ -20,21 +20,12 @@ extern "NetworkSatLib" module NetworkSatLib {
       // Following are all of the assumptions about the SAT solver we use for
       // our proofs.
 
-      // Used to ensure the initial node in the scheduler is satisfyable.
-      ensures sat(getTrueBool())
-
-
       ////////////////////////////////////
       ///// Used for King Property 1 /////
       ////////////////////////////////////
 
-      // TODO: Possibly derive this from simpler axioms.
-
-      // Negation Axiom of "or"
-      // Used in "step_execution()" to prove that if s1_pc is not satisfyable,
-      //   then s2_pc is satisfyable.
-      ensures forall a,b :: sat(a) ==>
-        sat(and(a,b)) || sat(and(a,not(b)))
+      // Used to ensure the initial node in the scheduler is satisfyable.
+      ensures sat(getTrueBool())
 
 
       ////////////////////////////////////

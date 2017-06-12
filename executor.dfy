@@ -10,7 +10,7 @@
 // Implements a basic subset of the LLVM intermediate representation.
 //   http://llvm.org/docs/LangRef.html
 module LlvmExecutor {
-  import opened SatLib : NetworkSatLib
+  import opened SatLib : Z3SatLib
 
   type Reg = int  // Index into map of registers, State.regs
 

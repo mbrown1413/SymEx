@@ -1,6 +1,6 @@
 
 
-extern "NetworkSatLib" module NetworkSatLib {
+extern "Z3SatLib" module Z3SatLib {
 
     type {:compile false} BoolExpr
     extern function method getTrueBool(): BoolExpr

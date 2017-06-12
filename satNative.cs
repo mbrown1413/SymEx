@@ -7,7 +7,7 @@ using System.Numerics;
 
 using Microsoft.Z3;
 
-namespace @NetworkSatLib {
+namespace @Z3SatLib {
 
   public class BoolExpr
   {

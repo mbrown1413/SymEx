@@ -1,6 +1,8 @@
 
-SymEx is a verified symbolic execution engine written in Dafny, a language with
+SymEx is a verified symbolic execution engine. It is written in Dafny, a language with
 the ability to statically prove properties about programs.
+
+Information on the properties proven: [PROPERTIES.md](PROPERTIES.md)
 
 
 ## Requirements
@@ -64,10 +66,10 @@ You may see errors like this:
 
     satNative.cs(8,17) : error CS0234: The type or namespace name `Z3' does not exist in the namespace `Microsoft'. Are you missing an assembly reference?
 
-Before panicking that Z3 could not be found, see if `symexec.exe` exists. Dafny
-may not be able to find `Microsoft.Z3.dll` when it generates the C# code, but
-we compile the C# code afterwards in a separate step that looks for
-`Microsoft.Z3.dll` in the current directory.
+Before panicking that Z3 could not be found, see if `symexec.exe` exists. If
+so, everything compiled fine. Dafny may not be able to find `Microsoft.Z3.dll`
+when it generates the C# code, but we compile the C# code afterwards in a
+separate step that looks for `Microsoft.Z3.dll` in the current directory.
 
 ## Running
 

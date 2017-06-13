@@ -14,10 +14,6 @@ method Main()
 
 // King Property 1
 // All nodes in the tree should be satisfyable.
-//
-// Verification: This property is simple to verify since we explicitly don't
-// enqueue to the scheduler if the path condition is not satisfyable. We
-// simply added this as a loop invariant in the main loop.
 predicate king1(scheduler: Scheduler)
   requires scheduler != null
   requires scheduler.a != null
@@ -31,14 +27,6 @@ predicate king1(scheduler: Scheduler)
 // King Property 2
 // Path conditions in leaf nodes do not overlap.
 // That is, any assignment of variables leads to exactly one leaf node.
-//
-// Verification: "step_execution()" and "Scheduler.Enqueue()" have the major
-// proof obligations. "Scheduler.Enqueue()" requires and ensures king2, but it
-// has some preconditions needed to prove this, namely that the input nodes
-// don't have overlapping pc's with any other leaves (except parent) and the
-// two input nodes don't overlap with each other. "step_execution()" must prove
-// that these preconditions hold. It does so using basic boolean axioms that
-// are assumed by the sat interface (see sat.dfy).
 predicate king2(scheduler: Scheduler)
   requires scheduler != null
   requires scheduler.a != null

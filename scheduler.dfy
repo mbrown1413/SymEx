@@ -64,7 +64,7 @@ class {:autocontracts false} Scheduler
                          node.state == initState &&
                          fresh(node)
       case None => false;
-    ensures !isEmpty()
+    ensures !IsEmpty()
     ensures fresh(a)
   {
     a := new NodeMaybe[1];
@@ -156,7 +156,7 @@ class {:autocontracts false} Scheduler
     ensures king2(this)
     ensures end == old(end)
 
-    requires !isEmpty()
+    requires !IsEmpty()
     modifies this
   {
     start := start+1;
@@ -165,7 +165,7 @@ class {:autocontracts false} Scheduler
       case None => null;
   }
 
-  function method isEmpty(): bool
+  function method IsEmpty(): bool
     requires Valid()
     ensures Valid()
     reads *
@@ -176,7 +176,7 @@ class {:autocontracts false} Scheduler
     start == end
   }
 
-  method printTree() returns ()
+  method PrintTree() returns ()
       requires a != null
     {
     var i := 0;

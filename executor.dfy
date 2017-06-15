@@ -1,10 +1,10 @@
 
 // An executor executes an instruction set or language as a state
-// machine. For a given state "s", "exec(s)" returns two possible next
-// states. "branchCondition(s)" returns the condition under which the
+// machine. For a given state "s", "Execute(s)" returns two possible next
+// states. "BranchCondition(s)" returns the condition under which the
 // first of those states should be taken. When "s" is executing a
 // non-branching instruction, it is common for "state(s)" to return (s2,
-// null), and for "branchCondition(s)" to return true.
+// null), and for "BranchCondition(s)" to return true.
 
 
 // Implements a basic subset of the LLVM intermediate representation.
@@ -33,7 +33,7 @@ module LlvmExecutor {
     return instrs;
   }
 
-  method getReg(s: State, r: Reg) returns (regExpr: IntExpr)
+  method GetReg(s: State, r: Reg) returns (regExpr: IntExpr)
     requires s.State?
   {
     if r in s.regs {
@@ -43,11 +43,11 @@ module LlvmExecutor {
     }
   }
 
-  method getInitialState() returns (s: State) {
+  method GetInitialState() returns (s: State) {
     return State(0, map[]);
   }
 
-  method branchCondition(s: State) returns (cond: SatLib.BoolExpr)
+  method BranchCondition(s: State) returns (cond: SatLib.BoolExpr)
   {
     var prog := program();
 
@@ -63,12 +63,12 @@ module LlvmExecutor {
       case Icmp(_, _, _) =>
         return getTrueBool();
       case Br(cond, _, _) =>
-        var condReg := getReg(s, cond);
+        var condReg := GetReg(s, cond);
         return cmp(condReg, intConst(1));
     }
   }
 
-  method exec(s: State) returns (s1: State, s2: State) {
+  method Execute(s: State) returns (s1: State, s2: State) {
     var prog := program();
 
     // If we're halted, both children are also halted
@@ -81,16 +81,16 @@ module LlvmExecutor {
     match prog[s.ip] {
 
       case Add(dest, op1, op2) =>
-        var x1 := getReg(s, op1);
-        var x2 := getReg(s, op2);
+        var x1 := GetReg(s, op1);
+        var x2 := GetReg(s, op2);
         return State(
           s.ip + 1,
           s.regs[dest := add(x1, x2)]
         ), HaltedState;
 
       case Icmp(dest, op1, op2) =>
-        var x1 := getReg(s, op1);
-        var x2 := getReg(s, op2);
+        var x1 := GetReg(s, op1);
+        var x2 := GetReg(s, op2);
         return State(
           s.ip + 1,
           s.regs[dest := boolToInt(cmp(x1, x2))]
@@ -108,7 +108,7 @@ module LlvmExecutor {
     }
   }
 
-  method halted(s: State) returns (b: bool) {
+  method IsHalted(s: State) returns (b: bool) {
     var prog := program();
     return !(s.State? && 0 <= s.ip < prog.Length);
   }

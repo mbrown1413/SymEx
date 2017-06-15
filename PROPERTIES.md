@@ -22,7 +22,7 @@ See `king2()` in `symexec.dfy` for the predicate for this property.
 
 This property is simple to verify since we explicitly don't enqueue nodes to
 the scheduler if the path condition is not satisfyable. We simply added this as
-a loop invariant in the main loop and in `step_execution()`. We also make the
+a loop invariant in the main loop and in `StepExecution()`. We also make the
 `Node` class so we can't create any nodes with unsatisfiable path conditions.
 
 
@@ -36,11 +36,11 @@ See `king1()` in `symexec.dfy` for the predicate for this property.
 
 ### Verification
 
-`step_execution()` and `Scheduler.Enqueue()` contain the major proof
+`StepExecution()` and `Scheduler.Enqueue()` contain the major proof
 obligations.  `Scheduler.Enqueue()` requires and ensures king2, but it has some
 preconditions needed to prove that king2 is a postcondition, namely that the
 input nodes don't have overlapping pc's with any other leaves (except parent)
-and the two input nodes don't overlap with each other. `step_execution()` must
+and the two input nodes don't overlap with each other. `StepExecution()` must
 prove that these preconditions hold. It does so using basic boolean axioms
 that are assumed by the sat interface (see sat.dfy).
 

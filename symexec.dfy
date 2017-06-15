@@ -8,8 +8,8 @@ import opened Exec : LlvmExecutor
 method Main()
   decreases *
 {
-  var scheduler := symex();
-  scheduler.printTree();
+  var scheduler := SymbolicExecute();
+  scheduler.PrintTree();
 }
 
 // King Property 1
@@ -46,7 +46,7 @@ predicate king2(scheduler: Scheduler)
 // The core of the symbolic execution engine. Explore state in the order
 // according to the scheduler, ensuring that a state is only explored if
 // it can be reached (the path condition leading to it is satisfyable).
-method symex() returns (scheduler: Scheduler)
+method SymbolicExecute() returns (scheduler: Scheduler)
   decreases *
   ensures scheduler != null
   ensures scheduler.a != null
@@ -55,11 +55,11 @@ method symex() returns (scheduler: Scheduler)
   ensures king1(scheduler)
   ensures king2(scheduler)
 {
-  var initState := getInitialState();
+  var initState := GetInitialState();
   scheduler := new Scheduler(initState);
 
-  assert !scheduler.isEmpty();
-  while !scheduler.isEmpty()
+  assert !scheduler.IsEmpty();
+  while !scheduler.IsEmpty()
     decreases *
     invariant scheduler.a != null
     invariant scheduler.Valid()
@@ -70,7 +70,7 @@ method symex() returns (scheduler: Scheduler)
   {
     var node := scheduler.Dequeue();
     if node != null {
-      step_execution(scheduler, node);
+      StepExecution(scheduler, node);
     }
 
   }
@@ -80,7 +80,7 @@ method symex() returns (scheduler: Scheduler)
 
 // Enqueue the children of state_node, but only if their path condition
 // is satisfyable.
-method step_execution(scheduler: Scheduler, state_node: Node)
+method StepExecution(scheduler: Scheduler, state_node: Node)
   requires scheduler != null
   requires scheduler.a != null
   requires state_node != null
@@ -103,13 +103,13 @@ method step_execution(scheduler: Scheduler, state_node: Node)
 
   modifies scheduler
 {
-  var halted := Exec.halted(state_node.state);
+  var halted := Exec.IsHalted(state_node.state);
   if halted {
     return;
   }
 
-  var bc := Exec.branchCondition(state_node.state);
-  var s1_state, s2_state := Exec.exec(state_node.state);
+  var bc := Exec.BranchCondition(state_node.state);
+  var s1_state, s2_state := Exec.Execute(state_node.state);
   var s1_pc := SatLib.and(state_node.pc, bc);
   var s2_pc := SatLib.and(state_node.pc, SatLib.not(bc));
 

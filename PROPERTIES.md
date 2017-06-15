@@ -4,11 +4,16 @@ King described symbolic execution and pointed out some properties that symbolic
 executor have. The properties that SymEx proves are taken from the King paper.
 We have creatively named them King 1, King 2 and King 3.
 
-  J.C. King.  Symbolic execution and program testing. Communications of the ACM 19(7), 385–394 (1976)
+    J.C. King.  Symbolic execution and program testing. Communications of the ACM 19(7), 385–394 (1976)
 
 SymEx produces a full execution tree, which these properties are asserted on.
 We make assumptions that the SAT solver we use behaves correctly, which is
 expressed in code in `sat.dfy`.
+
+Here are some resources I found helpful in figuring out how to prove things in Dafny:
+  * [Dafny troubleshooting guide](http://www.cse.chalmers.se/edu/year/2016/course/TDA567_Testing_debugging_and_verification/dafny_troubleshooting.pdf) - Some good tips and a guide to common verification errors.
+  * [Dafny Digest](https://www.cse.unsw.edu.au/~se2011/16s1/lectures/DafnyTerm3.pdf) - A few examples.
+  * [Rigorous Software Development, Lecture 9](http://cs.nyu.edu/wies/teaching/rsd-13/material/lec09.pdf) - More examples.
 
 
 ## King 1

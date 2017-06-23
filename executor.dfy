@@ -7,33 +7,48 @@
 // null), and for "BranchCondition(s)" to return true.
 
 
+type Reg = int  // Index into map of registers, State.regs
+
+// Fields cannot be duplicated, so fields are appended with the instruction.
+datatype Instr =
+  Add(add_dest: Reg, add_op1: Reg, add_op2: Reg)
+| Icmp(icmp_dest: Reg, icmp_op1: Reg, icmp_op2: Reg)
+| Br(br_cond: Reg, br_label1: int, br_label2: int)
+
+datatype State = State(ip: int, regs: map<Reg, IntExpr>) | HaltedState
+
+
 // Implements a basic subset of the LLVM intermediate representation.
 //   http://llvm.org/docs/LangRef.html
-module LlvmExecutor {
-  import opened SatLib : Z3SatLib
+class Executor {
 
-  type Reg = int  // Index into map of registers, State.regs
+  var program: array<Instr>;
 
-  // Fields cannot be duplicated, so fields are appended with the instruction.
-  datatype Instr =
-    Add(add_dest: Reg, add_op1: Reg, add_op2: Reg)
-  | Icmp(icmp_dest: Reg, icmp_op1: Reg, icmp_op2: Reg)
-  | Br(br_cond: Reg, br_label1: int, br_label2: int)
-
-  datatype State = State(ip: int, regs: map<Reg, IntExpr>) | HaltedState
-
-  method program() returns (instrs: array<Instr>)
-    ensures fresh(instrs)
+  constructor (prog: array<Instr>)
+    requires prog != null
+    ensures fresh(this.program)
+    ensures Valid()
+    modifies this
   {
-    instrs := new Instr[4];
-    instrs[0] := Add(0, 1, 2);
-    instrs[1] := Icmp(0, 0, 1);
-    instrs[2] := Br(0, 3, 4);
-    instrs[3] := Add(0, 1, 2);
-    return instrs;
+    this.program := new Instr[prog.Length];
+
+    // Copy prog to program
+    forall i | 0 <= i < prog.Length
+    {
+      program[i] := prog[i];
+    }
   }
 
-  method GetReg(s: State, r: Reg) returns (regExpr: IntExpr)
+  predicate Valid()
+    reads this
+  {
+    program != null
+  }
+
+  method {:opaque} GetReg(s: State, r: Reg) returns (regExpr: IntExpr)
+    requires Valid()
+    ensures Valid()
+
     requires s.State?
   {
     if r in s.regs {
@@ -43,21 +58,24 @@ module LlvmExecutor {
     }
   }
 
-  method GetInitialState() returns (s: State) {
+  method {:opaque} GetInitialState() returns (s: State)
+    requires Valid()
+    ensures Valid()
+  {
     return State(0, map[]);
   }
 
-  method BranchCondition(s: State) returns (cond: SatLib.BoolExpr)
+  method {:opaque} BranchCondition(s: State) returns (cond: SatLib.BoolExpr)
+    requires Valid()
+    ensures Valid()
   {
-    var prog := program();
-
     // If we're halted, or we run out of instructions, it
     // doesn't matter, the children will be halted.
-    if !(s.State? && 0 <= s.ip < prog.Length) {
+    if !(s.State? && 0 <= s.ip < program.Length) {
       return not(getTrueBool());
     }
 
-    match prog[s.ip] {
+    match program[s.ip] {
       case Add(_, _, _) =>
         return getTrueBool();
       case Icmp(_, _, _) =>
@@ -68,17 +86,18 @@ module LlvmExecutor {
     }
   }
 
-  method Execute(s: State) returns (s1: State, s2: State) {
-    var prog := program();
-
+  method {:opaque} Execute(s: State) returns (s1: State, s2: State)
+    requires Valid()
+    ensures Valid()
+  {
     // If we're halted, both children are also halted
-    if !(s.State? && 0 <= s.ip < prog.Length) {
+    if !(s.State? && 0 <= s.ip < program.Length) {
       return HaltedState, HaltedState;
     }
 
     // Return two children states.
     // If not branching, return (state, HaltedState).
-    match prog[s.ip] {
+    match program[s.ip] {
 
       case Add(dest, op1, op2) =>
         var x1 := GetReg(s, op1);
@@ -108,9 +127,11 @@ module LlvmExecutor {
     }
   }
 
-  method IsHalted(s: State) returns (b: bool) {
-    var prog := program();
-    return !(s.State? && 0 <= s.ip < prog.Length);
+  predicate method {:opaque} IsHalted(s: State)
+    requires Valid()
+    reads this
+  {
+    !(s.State? && 0 <= s.ip < program.Length)
   }
 
 }

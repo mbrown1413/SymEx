@@ -3,12 +3,20 @@ include "sat.dfy"
 include "scheduler.dfy"
 include "executor.dfy"
 
-import opened Exec : LlvmExecutor
+import opened SatLib : Z3SatLib
 
 method Main()
   decreases *
 {
-  var scheduler := SymbolicExecute();
+
+  var instrs := new Instr[4];
+  instrs[0] := Add(0, 1, 2);
+  instrs[1] := Icmp(0, 0, 1);
+  instrs[2] := Br(0, 3, 4);
+  instrs[3] := Add(0, 1, 2);
+
+  var executor := new Executor(instrs);
+  var scheduler := SymbolicExecute(executor);
   scheduler.PrintTree();
 }
 
@@ -46,16 +54,19 @@ predicate king2(scheduler: Scheduler)
 // The core of the symbolic execution engine. Explore state in the order
 // according to the scheduler, ensuring that a state is only explored if
 // it can be reached (the path condition leading to it is satisfyable).
-method SymbolicExecute() returns (scheduler: Scheduler)
+method SymbolicExecute(executor: Executor) returns (scheduler: Scheduler)
   decreases *
+  requires executor != null
   ensures scheduler != null
   ensures scheduler.a != null
   ensures scheduler.a.Length >= 1
+  requires executor.Valid()
+  ensures executor.Valid()
 
   ensures king1(scheduler)
   ensures king2(scheduler)
 {
-  var initState := GetInitialState();
+  var initState := executor.GetInitialState();
   scheduler := new Scheduler(initState);
 
   assert !scheduler.IsEmpty();
@@ -63,6 +74,7 @@ method SymbolicExecute() returns (scheduler: Scheduler)
     decreases *
     invariant scheduler.a != null
     invariant scheduler.Valid()
+    invariant executor.Valid()
 
     invariant king1(scheduler)
     invariant king2(scheduler)
@@ -70,7 +82,7 @@ method SymbolicExecute() returns (scheduler: Scheduler)
   {
     var node := scheduler.Dequeue();
     if node != null {
-      StepExecution(scheduler, node);
+      StepExecution(executor, scheduler, node);
     }
 
   }
@@ -80,7 +92,8 @@ method SymbolicExecute() returns (scheduler: Scheduler)
 
 // Enqueue the children of state_node, but only if their path condition
 // is satisfyable.
-method StepExecution(scheduler: Scheduler, state_node: Node)
+method StepExecution(executor: Executor, scheduler: Scheduler, state_node: Node)
+  requires executor != null
   requires scheduler != null
   requires scheduler.a != null
   requires state_node != null
@@ -88,6 +101,8 @@ method StepExecution(scheduler: Scheduler, state_node: Node)
   requires scheduler.a[scheduler.start].Some?
   requires scheduler.a[scheduler.start].v == state_node
   requires scheduler.start >= 0
+  requires executor.Valid()
+  ensures executor.Valid()
 
   ensures scheduler.Valid()
 
@@ -103,13 +118,13 @@ method StepExecution(scheduler: Scheduler, state_node: Node)
 
   modifies scheduler
 {
-  var halted := Exec.IsHalted(state_node.state);
+  var halted := executor.IsHalted(state_node.state);
   if halted {
     return;
   }
 
-  var bc := Exec.BranchCondition(state_node.state);
-  var s1_state, s2_state := Exec.Execute(state_node.state);
+  var bc := executor.BranchCondition(state_node.state);
+  var s1_state, s2_state := executor.Execute(state_node.state);
   var s1_pc := SatLib.and(state_node.pc, bc);
   var s2_pc := SatLib.and(state_node.pc, SatLib.not(bc));
 

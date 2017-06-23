@@ -9,11 +9,12 @@ method Main()
   decreases *
 {
 
-  var instrs := new Instr[4];
-  instrs[0] := Add(0, 1, 2);
-  instrs[1] := Icmp(0, 0, 1);
-  instrs[2] := Br(0, 3, 4);
-  instrs[3] := Add(0, 1, 2);
+  var instrs := new Instr[5];
+  instrs[0] := Assign(0, 2);   // %0 = 2
+  instrs[1] := Add(2, 0, 1);   // %2 = add %0, %1
+  instrs[2] := Icmp(3, 0, 1);  // %3 = icmp eq %0, %1
+  instrs[3] := Br(3, 4, 5);    // br %3, label 4, label 5
+  instrs[4] := Assign(0, 3);   // %0 = 3
 
   var executor := new Executor(instrs);
   var scheduler := SymbolicExecute(executor);

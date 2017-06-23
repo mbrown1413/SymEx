@@ -11,7 +11,8 @@ type Reg = int  // Index into map of registers, State.regs
 
 // Fields cannot be duplicated, so fields are appended with the instruction.
 datatype Instr =
-  Add(add_dest: Reg, add_op1: Reg, add_op2: Reg)
+  Assign(assign_dest: Reg, assign_value: int)
+| Add(add_dest: Reg, add_op1: Reg, add_op2: Reg)
 | Icmp(icmp_dest: Reg, icmp_op1: Reg, icmp_op2: Reg)
 | Br(br_cond: Reg, br_label1: int, br_label2: int)
 
@@ -76,6 +77,8 @@ class Executor {
     }
 
     match program[s.ip] {
+      case Assign(_, _) =>
+        return getTrueBool();
       case Add(_, _, _) =>
         return getTrueBool();
       case Icmp(_, _, _) =>
@@ -99,6 +102,11 @@ class Executor {
     // If not branching, return (state, HaltedState).
     match program[s.ip] {
 
+      case Assign(dest, value) =>
+        return State(
+          s.ip + 1,
+          s.regs[dest := intConst(value)]
+        ), HaltedState;
       case Add(dest, op1, op2) =>
         var x1 := GetReg(s, op1);
         var x2 := GetReg(s, op2);

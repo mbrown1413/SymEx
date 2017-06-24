@@ -15,6 +15,9 @@ namespace @Z3SatLib {
     public BoolExpr(Microsoft.Z3.BoolExpr s) {
       expr = s;
     }
+    public override string ToString() {
+      return expr.ToString();
+    }
   }
 
   public class IntExpr
@@ -22,6 +25,9 @@ namespace @Z3SatLib {
     public Microsoft.Z3.ArithExpr expr;
     public IntExpr(Microsoft.Z3.ArithExpr s) {
       expr = s;
+    }
+    public override string ToString() {
+      return expr.ToString();
     }
   }
 
@@ -63,15 +69,6 @@ namespace @Z3SatLib {
     public static IntExpr boolToInt(BoolExpr b) {
       IntExpr e;
       boolToInt(b, out e);
-      return e;
-    }
-
-    public static void boolExprToStr(BoolExpr b, out string e) {
-      e = b.expr.ToString();
-    }
-    public static string boolExprToStr(BoolExpr b) {
-      string e;
-      boolExprToStr(b, out e);
       return e;
     }
 
@@ -121,8 +118,3 @@ namespace @Z3SatLib {
   }
 
 }
-
-
-
-
-

@@ -189,7 +189,10 @@ class {:autocontracts false} Scheduler
           if node == null {
             print "NULL";
           } else {
-            print "  ", node.state, "  ", SatLib.boolExprToStr(node.pc), "\n";
+            print "Node(\n";
+            print "    pc = ", node.pc, "\n";
+            print "    state = ", node.state, "\n";
+            print ")\n";
           }
         case None =>
           print "None\n";

@@ -49,7 +49,7 @@ source](https://github.com/Z3Prover/z3). Make sure to include `--dotnet` to
 compile the C# bindings.
 
 When compiling SymEx, `Microsoft.Z3.dll` needs to be available. This file will
-be in `z3-<version>/bin/' in the binary release, or in `build/` if you compiled
+be in `z3-<version>/bin/` in the binary release, or in `build/` if you compiled
 from source. The simplest way to make this available is link to it in the SymEx
 directory:
 
@@ -60,7 +60,7 @@ directory:
 
 Compile:
 
-  $ make
+    $ make
 
 You may see errors like this:
 
